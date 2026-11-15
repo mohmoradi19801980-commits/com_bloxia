@@ -2,7 +2,7 @@
 <extension type="component" version="5.0" method="upgrade">
     <name>com_bloxia</name>
     <creationDate>2026-11</creationDate>
-    <author>Seyyed Mohsen Sadjadi</author>
+    <author>Mohsen Sadjadi</author>
     <authorEmail>info@bastangraphic.com</authorEmail>
     <authorUrl>https://bastangraphic.com</authorUrl>
     <copyright>Copyright (C) 2026 BastanGraphic.</copyright>
@@ -16,6 +16,7 @@
     <files folder="site">
         <folder>src</folder>
         <folder>tmpl</folder>
+        <folder>services</folder>
     </files>
 
     <media destination="com_bloxia" folder="media">
