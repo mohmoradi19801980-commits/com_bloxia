@@ -10,7 +10,6 @@ use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\Component\Router\RouterFactoryInterface;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
-use Joomla\Registry\Registry;
 use BastanGraphic\Component\Bloxia\Administrator\Extension\BloxiaComponent;
 
 return new class implements ServiceProviderInterface {
@@ -23,9 +22,9 @@ return new class implements ServiceProviderInterface {
             ComponentInterface::class,
             function (Container $container) {
                 $component = new BloxiaComponent($container->get(ComponentDispatcherFactoryInterface::class));
-                $component->setRegistry($container->get(Registry::class));
                 $component->setMVCFactory($container->get(MVCFactoryInterface::class));
                 $component->setRouterFactory($container->get(RouterFactoryInterface::class));
+                
                 return $component;
             }
         );
