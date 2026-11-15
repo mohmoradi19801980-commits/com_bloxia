@@ -35,6 +35,7 @@
         <files folder="admin">
             <folder>src</folder>
             <folder>sql</folder>
+            <folder>services</folder>
         </files>
     </administration>
 </extension>
