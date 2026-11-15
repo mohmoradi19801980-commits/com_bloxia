@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" version="5.0" method="upgrade">
+    <name>com_bloxia</name>
+    <creationDate>2026-11</creationDate>
+    <author>Seyyed Mohsen Sadjadi</author>
+    <authorEmail>info@bastangraphic.com</authorEmail>
+    <authorUrl>https://bastangraphic.com</authorUrl>
+    <copyright>Copyright (C) 2026 BastanGraphic.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <version>1.0.0</version>
+    <description>Bloxia Game Engine and User Dashboard</description>
+
+    <!-- ثبت Namespace کامپوننت برای اتولودر جوملا ۵ -->
+    <namespace path="src">BastanGraphic\Component\Bloxia</namespace>
+
+    <files folder="site">
+        <folder>src</folder>
+        <folder>tmpl</folder>
+    </files>
+
+    <media destination="com_bloxia" folder="media">
+        <folder>js</folder>
+        <folder>css</folder>
+    </media>
+
+    <install>
+        <sql>
+            <file driver="mysql" charset="utf8">sql/install.mysql.utf8.sql</file>
+        </sql>
+    </install>
+
+    <administration>
+        <menu>Bloxia Dashboard</menu>
+        <files folder="admin">
+            <folder>src</folder>
+            <folder>sql</folder>
+        </files>
+    </administration>
+</extension>
