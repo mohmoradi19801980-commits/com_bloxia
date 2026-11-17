@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+    <layout title="ورود به دنیای Bloxia" option="COM_BLOXIA_LOGIN_VIEW_DEFAULT_TITLE">
+        <message>نمایش فرم ورود با شماره موبایل و OTP</message>
+    </layout>
+</metadata>
