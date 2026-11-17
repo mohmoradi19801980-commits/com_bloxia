@@ -1,9 +1,10 @@
 -- جدول پروفایل و امتیازات کاربران
 CREATE TABLE IF NOT EXISTS `#__bloxia_user_profiles` (
-  `user_id` int(11) UNSIGNED NOT NULL, -- متصل به جدول users جوملا
-  `bloxia_points` int(11) NOT NULL DEFAULT 0, -- کیف پول کاربر
-  `character_type` varchar(50) DEFAULT NULL, -- مثلا girl_1 یا boy_headphone
-  `has_onboarded` tinyint(1) NOT NULL DEFAULT 0, -- آیا مرحله انتخاب کاراکتر را رد کرده؟
+  `user_id` int(11) UNSIGNED NOT NULL,
+  `bloxia_points` int(11) NOT NULL DEFAULT 0,
+  `character_type` varchar(50) DEFAULT NULL,
+  `character_data` text DEFAULT NULL, -- این ستون برای ذخیره JSON کاراکتر و بازی اضافه شد
+  `has_onboarded` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -11,9 +12,9 @@ CREATE TABLE IF NOT EXISTS `#__bloxia_user_profiles` (
 CREATE TABLE IF NOT EXISTS `#__bloxia_items` (
   `id` int(11) UNSIGNED AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
-  `type` varchar(50) NOT NULL, -- مثلا cloth, hat, shoes
-  `price` int(11) NOT NULL DEFAULT 0, -- قیمت به Bloxia
-  `asset_path` varchar(255) NOT NULL, -- مسیر فایل 3D یا تکسچر
+  `type` varchar(50) NOT NULL,
+  `price` int(11) NOT NULL DEFAULT 0,
+  `asset_path` varchar(255) NOT NULL,
   `published` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

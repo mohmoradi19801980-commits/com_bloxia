@@ -48,14 +48,8 @@ class BloxiaUserPlugin extends CMSPlugin implements SubscriberInterface
             $hasOnboarded = 0;
         }
 
-        // تصمیم‌گیری برای مسیر ریدایرکت
-        if ((int) $hasOnboarded === 0) {
-            // هدایت به صفحه انتخاب کاراکتر
-            $redirectUrl = Route::_('index.php?option=com_bloxia&view=character', false);
-        } else {
-            // هدایت به شهر/خانه سه بعدی
-            $redirectUrl = Route::_('index.php?option=com_bloxia&view=world', false);
-        }
+        // تصمیم‌گیری برای مسیر ریدایرکت (همه به سمت World می‌روند)
+        $redirectUrl = Route::_('index.php?option=com_bloxia&view=world', false);
 
         $app->enqueueMessage('به دنیای Bloxia خوش آمدید!', 'success');
         $app->redirect($redirectUrl);
