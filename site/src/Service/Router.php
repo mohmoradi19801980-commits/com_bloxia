@@ -18,9 +18,9 @@ class Router extends RouterView
         $character = new RouterViewConfiguration('character');
         $this->registerView($character);
 
-        // ۳. اگر در آینده صفحه world را ساختیم، این خطوط را از کامنت درمی‌آوریم:
-        // $world = new RouterViewConfiguration('world');
-        // $this->registerView($world);
+        // ۳. معرفی صفحه اصلی متاورس (World)
+        $world = new RouterViewConfiguration('world');
+        $this->registerView($world);
 
         parent::__construct($app, $menu);
     }
