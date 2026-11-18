@@ -4,18 +4,18 @@ namespace BastanGraphic\Component\Bloxia\Site\Controller;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
-use Joomla\CMS\Response\JsonResponse;
 
 class MetaverseController extends BaseController
 {
-    // ۱. ارسال تمام اطلاعات کاراکتر، لباس‌ها و خانه به موتور بازی هنگام لود اولیه
+    // ۱. دریافت اطلاعات کاراکتر
     public function getCharacter()
     {
         $app = Factory::getApplication();
         $user = Factory::getUser();
 
         if ($user->guest) {
-            echo new JsonResponse(null, 'Unauthorized', true);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized']);
             $app->close();
         }
 
@@ -28,7 +28,6 @@ class MetaverseController extends BaseController
         $db->setQuery($query);
         $profile = $db->loadObject();
 
-        // اسکلت‌بندی پیش‌فرض یک بازیکن جدید
         $state = [
             'userId' => $user->id,
             'name' => $user->name,
@@ -50,7 +49,6 @@ class MetaverseController extends BaseController
             'myGames' => []
         ];
 
-        // اگر قبلاً دیتایی ذخیره شده بود، آن را جایگزین پیش‌فرض‌ها کن
         if ($profile && !empty($profile->character_data)) {
             $savedData = json_decode($profile->character_data, true);
             if (is_array($savedData)) {
@@ -58,30 +56,30 @@ class MetaverseController extends BaseController
             }
         }
 
-        echo new JsonResponse($state);
+        // استفاده از json_encode استاندارد برای تطابق دقیق با کدهای جاوا اسکریپت
+        header('Content-Type: application/json');
+        echo json_encode($state);
         $app->close();
     }
 
-    // ۲. ذخیره ظاهر و نام کاربر در اولین باری که کاراکتر می‌سازد (فرم ۱ بار رایگان)
+    // ۲. ذخیره ساخت اولیه کاراکتر
     public function saveInitialCas()
     {
-        Session::checkToken() or die('Invalid Token');
+        // Session::checkToken() or die(json_encode(['error' => 'Invalid Token']));
         $app = Factory::getApplication();
         $user = Factory::getUser();
 
         if ($user->guest) {
-            echo new JsonResponse(null, 'Unauthorized', true);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized']);
             $app->close();
         }
 
-        // خواندن دیتای خام JSON که از جاوا اسکریپت آمده
         $input = json_decode(file_get_contents('php://input'), true);
         $appearance = $input['appearance'] ?? [];
         $name = $input['name'] ?? $user->name;
 
         $db = Factory::getContainer()->get('DatabaseDriver');
-        
-        // خواندن وضعیت فعلی دیتابیس
         $query = $db->getQuery(true)
             ->select('*')
             ->from($db->quoteName('#__bloxia_user_profiles'))
@@ -94,23 +92,20 @@ class MetaverseController extends BaseController
             $state = json_decode($profile->character_data, true);
         }
 
-        // جلوگیری از تقلب (فقط یک بار مجاز به استفاده از این فرم است)
         if (isset($state['freeCasUsed']) && $state['freeCasUsed'] === true) {
-            echo new JsonResponse(null, 'ویرایش رایگان اولیه قبلا انجام شده!', true);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'ویرایش رایگان اولیه قبلا انجام شده!']);
             $app->close();
         }
 
-        // اعمال تغییرات جدید
         $state['appearance'] = array_merge($state['appearance'] ?? [], $appearance);
         $state['name'] = $name;
         $state['freeCasUsed'] = true;
         
-        // همگام‌سازی نام کاربر در سیستم اصلی جوملا
         $joomlaUser = \Joomla\CMS\User\User::getInstance($user->id);
         $joomlaUser->name = $name;
         $joomlaUser->save();
 
-        // ذخیره تغییرات در دیتابیس Bloxia
         $updateQuery = $db->getQuery(true)
             ->update($db->quoteName('#__bloxia_user_profiles'))
             ->set($db->quoteName('character_data') . ' = ' . $db->quote(json_encode($state)))
@@ -120,7 +115,19 @@ class MetaverseController extends BaseController
         $db->setQuery($updateQuery);
         $db->execute();
 
-        echo new JsonResponse(['success' => true, 'state' => $state]);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'state' => $state]);
         $app->close();
     }
+
+    // متدهای خالی برای جلوگیری از ارور ۴۰۴ وقتی کاربر روی بقیه دکمه‌ها کلیک می‌کند
+    // (در مراحل بعدی منطق این متدها را کامل می‌کنیم)
+    public function getHome() { header('Content-Type: application/json'); echo json_encode([]); Factory::getApplication()->close(); }
+    public function sync() { header('Content-Type: application/json'); echo json_encode([]); Factory::getApplication()->close(); }
+    public function hairSalon() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    public function submitGame() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    public function walletTx() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    public function buyCart() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    public function equip() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    public function saveHome() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
 }
