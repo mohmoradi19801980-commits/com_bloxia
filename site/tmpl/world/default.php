@@ -158,23 +158,23 @@ $baseUri = Uri::root();
          * 1. METAVERSE BRIDGE (اقتصاد BitBlox + تلویزیون آپلود بازی + چت امن + جوملا)
          * ============================================================================
          */
-        const METAVERSE_CONFIG = {
-            mockMode: false,
-            syncIntervalMs: 2500,
-            endpoints: {
-                getCharacter:   'index.php?option=com_YOURCOMPONENT&task=metaverse.getCharacter&format=json',
-                saveInitialCas: 'index.php?option=com_YOURCOMPONENT&task=metaverse.saveInitialCas&format=json',
-                hairSalonBuy:   'index.php?option=com_YOURCOMPONENT&task=metaverse.hairSalon&format=json',
-                submitGame:     'index.php?option=com_YOURCOMPONENT&task=metaverse.submitGame&format=json',
-                spendOrReward:  'index.php?option=com_YOURCOMPONENT&task=metaverse.walletTx&format=json',
-                syncWorld:      'index.php?option=com_YOURCOMPONENT&task=metaverse.sync&format=json',
-                buyCart:        'index.php?option=com_YOURCOMPONENT&task=metaverse.buyCart&format=json',
-                equipItem:      'index.php?option=com_YOURCOMPONENT&task=metaverse.equip&format=json',
-                saveHome:       'index.php?option=com_YOURCOMPONENT&task=metaverse.saveHome&format=json',
-                getHomeData:    'index.php?option=com_YOURCOMPONENT&task=metaverse.getHome&format=json'
-            },
-            csrfToken: window.Joomla ? Joomla.getOptions('csrf.token') : 'dev_token'
-        };
+    const METAVERSE_CONFIG = {
+        mockMode: false, // اتصال به دیتابیس جوملا روشن است
+        syncIntervalMs: 2500,
+        endpoints: {
+            getCharacter:   'index.php?option=com_bloxia&task=metaverse.getCharacter&format=json',
+            saveInitialCas: 'index.php?option=com_bloxia&task=metaverse.saveInitialCas&format=json',
+            hairSalonBuy:   'index.php?option=com_bloxia&task=metaverse.hairSalon&format=json',
+            submitGame:     'index.php?option=com_bloxia&task=metaverse.submitGame&format=json',
+            spendOrReward:  'index.php?option=com_bloxia&task=metaverse.walletTx&format=json',
+            syncWorld:      'index.php?option=com_bloxia&task=metaverse.sync&format=json',
+            buyCart:        'index.php?option=com_bloxia&task=metaverse.buyCart&format=json',
+            equipItem:      'index.php?option=com_bloxia&task=metaverse.equip&format=json',
+            saveHome:       'index.php?option=com_bloxia&task=metaverse.saveHome&format=json',
+            getHomeData:    'index.php?option=com_bloxia&task=metaverse.getHome&format=json'
+        },
+        csrfToken: window.Joomla.getOptions('csrf.token')
+    };
 
         const SAFE_CHAT_PHRASES = [
             { id: 'greet_how', text: 'سلام خوبی؟ 😊', reply: 'خوبم ممنون :) تو چطوری؟ 🌟' },
