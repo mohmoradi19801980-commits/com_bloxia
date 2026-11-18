@@ -9,7 +9,7 @@ $baseUri = Uri::root();
 <script type="importmap">
     {
         "imports": {
-            "three": "<?php echo $baseUri; ?>media/com_bloxia/js/three/three.module.js"
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
         }
     }
 </script>
