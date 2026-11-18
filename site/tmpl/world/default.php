@@ -2432,7 +2432,7 @@ $baseUri = Uri::root();
             let gridHtml = `<div class="item-grid">`;
             CATALOG[shopZone].forEach(item => {
                 gridHtml += `
-                    <div class="shop-card">
+                    <div class="shop-card" style="cursor:pointer;" data-preview-id="${item.id}" title="برای پیش‌نمایش کلیک کن">
                         <h4>${item.name}</h4>
                         <div class="price">💎 ${item.price} BitBlox</div>
                         <button class="btn-action btn-secondary btn-add-cart" data-id="${item.id}" style="width:100%;padding:5px;">➕ افزودن به سبد</button>
@@ -2442,15 +2442,47 @@ $baseUri = Uri::root();
             gridHtml += `</div>`;
             body.innerHTML = gridHtml;
 
+            // قابلیت پیش‌نمایش با کلیک روی کارت محصول
+            body.querySelectorAll('.shop-card').forEach(card => {
+                card.onclick = (e) => {
+                    if(e.target.classList.contains('btn-add-cart')) return;
+                    const item = CATALOG[shopZone].find(i => i.id === card.dataset.previewId);
+                    if (item && ['hat', 'shirt', 'shoes', 'handProp'].includes(item.type)) {
+                        const tempApp = { ...playerState.appearance };
+                        if (item.type === 'hat') tempApp.hat = item.id;
+                        if (item.type === 'shirt') tempApp.shirtColor = item.color;
+                        if (item.type === 'shoes') tempApp.shoesColor = item.color;
+                        if (item.type === 'handProp') tempApp.handProp = item.id;
+                        myRig.applyAppearance(tempApp);
+                    }
+                };
+            });
+
+            // افزودن به سبد خرید و پیش‌نمایش همزمان
             body.querySelectorAll('.btn-add-cart').forEach(btn => {
                 btn.onclick = () => {
                     const item = CATALOG[shopZone].find(i => i.id === btn.dataset.id);
                     if (item) {
                         shoppingCart.push(item);
                         updateCartUI();
+                        if (['hat', 'shirt', 'shoes', 'handProp'].includes(item.type)) {
+                            const tempApp = { ...playerState.appearance };
+                            if (item.type === 'hat') tempApp.hat = item.id;
+                            if (item.type === 'shirt') tempApp.shirtColor = item.color;
+                            if (item.type === 'shoes') tempApp.shoesColor = item.color;
+                            if (item.type === 'handProp') tempApp.handProp = item.id;
+                            myRig.applyAppearance(tempApp);
+                        }
                     }
                 };
             });
+
+            // اگر کاربر پنل را بست و خرید نکرد، لباس‌هایش به حالت اصلی برگردد
+            const closeBtn = panel.querySelector('.modal-header button');
+            closeBtn.onclick = () => {
+                myRig.applyAppearance(playerState.appearance);
+                panel.classList.remove('open');
+            };
 
             updateCartUI();
             panel.classList.add('open');

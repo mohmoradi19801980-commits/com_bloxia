@@ -3,12 +3,11 @@ namespace BastanGraphic\Component\Bloxia\Site\Controller;
 
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Response\JsonResponse;
 
 class MetaverseController extends BaseController
 {
     // ==========================================
-    // توابع کمکی (خواندن و نوشتن در دیتابیس)
+    // توابع کمکی (خواندن و نوشتن امن در دیتابیس)
     // ==========================================
     private function loadUserState()
     {
@@ -20,10 +19,31 @@ class MetaverseController extends BaseController
         $db->setQuery($query);
         $profile = $db->loadObject();
 
+        // ساختار حیاتی پیش‌فرض (جلوگیری از خطای خالی بودن دیتابیس هنگام خرید)
+        $state = [
+            'userId' => $user->id,
+            'name' => $user->name,
+            'bitblox' => $profile && (int)$profile->bloxia_points > 0 ? (int)$profile->bloxia_points : 500,
+            'freeCasUsed' => false,
+            'appearance' => [
+                'skinColor' => 0xffdbac, 'hairStyle' => 'short', 'hairColor' => 0x451a03,
+                'shirtColor' => 0x3b82f6, 'pantsColor' => 0x1e293b, 'shoesColor' => 0xf8fafc,
+                'hat' => null, 'handProp' => null
+            ],
+            'wardrobe' => [],
+            'furnitureInventory' => [],
+            'homeLayout' => [],
+            'myGames' => []
+        ];
+
+        // اگر دیتایی از قبل ذخیره شده بود، روی حالت پیش‌فرض می‌نشیند
         if ($profile && !empty($profile->character_data)) {
-            return json_decode($profile->character_data, true);
+            $savedData = json_decode($profile->character_data, true);
+            if (is_array($savedData)) {
+                $state = array_replace_recursive($state, $savedData);
+            }
         }
-        return null; // اگر دیتایی نبود
+        return $state;
     }
 
     private function saveUserState($state)
@@ -32,12 +52,12 @@ class MetaverseController extends BaseController
         $db = Factory::getContainer()->get('DatabaseDriver');
         $query = $db->getQuery(true)->update($db->quoteName('#__bloxia_user_profiles'))
             ->set($db->quoteName('character_data') . ' = ' . $db->quote(json_encode($state)))
-            ->set($db->quoteName('bloxia_points') . ' = ' . (int)$state['bitblox']) // آپدیت همزمان امتیازات در ستون مجزا
+            ->set($db->quoteName('bloxia_points') . ' = ' . (int)$state['bitblox'])
+            ->set($db->quoteName('has_onboarded') . ' = 1')
             ->where('user_id = ' . (int)$user->id);
         $db->setQuery($query)->execute();
     }
 
-    // کاتالوگ امنیتی سرور (برای جلوگیری از هک قیمت‌ها توسط کاربران)
     private function getItemDetails($itemId)
     {
         $catalog = [
@@ -65,28 +85,13 @@ class MetaverseController extends BaseController
     // فاز اول: اقتصاد و سیستم ذخیره‌سازی
     // ==========================================
 
-    // ۱. ارسال اطلاعات کاراکتر به بازی هنگام لود اولیه
     public function getCharacter()
     {
-        $user = Factory::getUser();
-        if ($user->guest) { header('Content-Type: application/json'); echo json_encode(['error'=>'Unauthorized']); exit; }
-
         $state = $this->loadUserState();
-        if (!$state) {
-            // ساختار پیش‌فرض برای کاربر جدید
-            $state = [
-                'userId' => $user->id, 'name' => $user->name, 'bitblox' => 500, 'freeCasUsed' => false,
-                'appearance' => ['skinColor'=>0xffdbac, 'hairStyle'=>'short', 'hairColor'=>0x451a03, 'shirtColor'=>0x3b82f6, 'pantsColor'=>0x1e293b, 'shoesColor'=>0xf8fafc, 'hat'=>null, 'handProp'=>null],
-                'wardrobe' => [], 'furnitureInventory' => [], 'homeLayout' => [], 'myGames' => []
-            ];
-        }
-
-        header('Content-Type: application/json');
-        echo json_encode($state);
-        exit;
+        if (!$state) { header('Content-Type: application/json'); echo json_encode(['error'=>'Unauthorized']); exit; }
+        header('Content-Type: application/json'); echo json_encode($state); exit;
     }
 
-    // ۲. تراکنش‌های مالی (سینما، گیم‌نت، شهربازی)
     public function walletTx()
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -94,20 +99,14 @@ class MetaverseController extends BaseController
         $state = $this->loadUserState();
 
         if ($delta < 0 && $state['bitblox'] < abs($delta)) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'موجودی BitBlox کافی نیست!']);
-            exit;
+            header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'موجودی BitBlox کافی نیست!']); exit;
         }
 
         $state['bitblox'] += $delta;
         $this->saveUserState($state);
-
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'state' => $state]);
-        exit;
+        header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
     }
 
-    // ۳. آرایشگاه شهر (تغییر مدل مو با کسر هزینه)
     public function hairSalon()
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -123,12 +122,9 @@ class MetaverseController extends BaseController
         $state['appearance']['hairColor'] = (int) ($input['hairColor'] ?? 0x451a03);
         $this->saveUserState($state);
 
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'state' => $state]);
-        exit;
+        header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
     }
 
-    // ۴. خرید از فروشگاه‌ها (محاسبه قیمت امن در سرور)
     public function buyCart()
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -154,7 +150,6 @@ class MetaverseController extends BaseController
         foreach ($itemsToProcess as $item) {
             if (in_array($item['type'], ['hat', 'shirt', 'shoes', 'handProp'])) {
                 if (!in_array($item['id'], $state['wardrobe'])) { $state['wardrobe'][] = $item['id']; }
-                // تجهیز خودکار آیتم خریداری شده
                 if ($item['type'] == 'hat') $state['appearance']['hat'] = $item['id'];
                 if ($item['type'] == 'shirt') $state['appearance']['shirtColor'] = $item['color'];
                 if ($item['type'] == 'shoes') $state['appearance']['shoesColor'] = $item['color'];
@@ -168,7 +163,6 @@ class MetaverseController extends BaseController
         header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
     }
 
-    // ۵. پوشیدن لباس‌های داخل کمد
     public function equip()
     {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -188,47 +182,70 @@ class MetaverseController extends BaseController
         header('Content-Type: application/json'); echo json_encode($state); exit;
     }
 
-    // ۶. ذخیره دائمی چیدمان خانه
     public function saveHome()
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $state = $this->loadUserState();
-        
         $state['homeLayout'] = $input['layout'] ?? [];
         $state['furnitureInventory'] = $input['inventory'] ?? [];
-        
         $this->saveUserState($state);
         header('Content-Type: application/json'); echo json_encode($state); exit;
     }
 
-    // ذخیره اولیه کاراکتر
     public function saveInitialCas()
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $state = $this->loadUserState();
-        $user = Factory::getUser();
 
         if (isset($state['freeCasUsed']) && $state['freeCasUsed'] === true) {
             header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'ویرایش رایگان اولیه قبلا انجام شده!']); exit;
         }
 
         $state['appearance'] = array_merge($state['appearance'] ?? [], $input['appearance'] ?? []);
-        $state['name'] = $input['name'] ?? $user->name;
+        $state['name'] = $input['name'] ?? Factory::getUser()->name;
         $state['freeCasUsed'] = true;
         
-        $joomlaUser = clone $user; $joomlaUser->name = $state['name']; $joomlaUser->save();
-        $this->saveUserState($state);
+        $user = Factory::getUser();
+        $joomlaUser = \Joomla\CMS\User\User::getInstance($user->id);
+        $joomlaUser->name = $state['name'];
+        $joomlaUser->save();
 
+        $this->saveUserState($state);
         header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
     }
+    public function getHome() 
+    { 
+        $app = Factory::getApplication();
+        $user = Factory::getUser();
+        $ownerId = (int) $app->input->get('owner_id', 0);
+        
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        $query = $db->getQuery(true)->select('*')->from($db->quoteName('#__bloxia_user_profiles'))->where('user_id = ' . $ownerId);
+        $db->setQuery($query);
+        $profile = $db->loadObject();
 
-    // ==========================================
-    // متدهای فازهای بعدی (جلوگیری از ارور 404)
-    // ==========================================
-    public function getHome() { 
-        $ownerId = (int) Factory::getApplication()->input->get('owner_id', 0);
-        header('Content-Type: application/json'); echo json_encode(['ownerId' => $ownerId, 'ownerName' => 'همسایه', 'isMine' => false, 'layout' => [], 'games' => []]); exit; 
+        // تشخیص اینکه آیا کاربری که وارد خانه شده، خودش صاحب‌خانه است یا خیر
+        $isMine = (!$user->guest && $user->id == $ownerId);
+        $layout = [];
+        $games = [];
+        $ownerName = 'شهروند';
+
+        if ($profile && !empty($profile->character_data)) {
+            $data = json_decode($profile->character_data, true);
+            $layout = $data['homeLayout'] ?? [];
+            $games = $data['myGames'] ?? [];
+            $ownerName = $data['name'] ?? 'شهروند';
+        }
+
+        header('Content-Type: application/json'); 
+        echo json_encode([
+            'ownerId' => $ownerId, 
+            'ownerName' => $ownerName, 
+            'isMine' => $isMine, 
+            'layout' => $layout, 
+            'games' => $games
+        ]); 
+        exit; 
     }
-    public function sync() { header('Content-Type: application/json'); echo json_encode([]); exit; }
-    public function submitGame() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); exit; }
+    
 }
