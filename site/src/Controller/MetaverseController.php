@@ -3,131 +3,232 @@ namespace BastanGraphic\Component\Bloxia\Site\Controller;
 
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Session\Session;
+use Joomla\CMS\Response\JsonResponse;
 
 class MetaverseController extends BaseController
 {
-    // ۱. دریافت اطلاعات کاراکتر
-    public function getCharacter()
+    // ==========================================
+    // توابع کمکی (خواندن و نوشتن در دیتابیس)
+    // ==========================================
+    private function loadUserState()
     {
-        $app = Factory::getApplication();
         $user = Factory::getUser();
-
-        if ($user->guest) {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Unauthorized']);
-            $app->close();
-        }
+        if ($user->guest) return null;
 
         $db = Factory::getContainer()->get('DatabaseDriver');
-        $query = $db->getQuery(true)
-            ->select('*')
-            ->from($db->quoteName('#__bloxia_user_profiles'))
-            ->where($db->quoteName('user_id') . ' = ' . (int) $user->id);
-            
+        $query = $db->getQuery(true)->select('*')->from($db->quoteName('#__bloxia_user_profiles'))->where('user_id = ' . (int)$user->id);
         $db->setQuery($query);
         $profile = $db->loadObject();
 
-        $state = [
-            'userId' => $user->id,
-            'name' => $user->name,
-            'bitblox' => $profile ? (int) $profile->bloxia_points : 500,
-            'freeCasUsed' => false,
-            'appearance' => [
-                'skinColor' => 0xffdbac,
-                'hairStyle' => 'short',
-                'hairColor' => 0x451a03,
-                'shirtColor' => 0x3b82f6,
-                'pantsColor' => 0x1e293b,
-                'shoesColor' => 0xf8fafc,
-                'hat' => null,
-                'handProp' => null
-            ],
-            'wardrobe' => [],
-            'furnitureInventory' => [],
-            'homeLayout' => [],
-            'myGames' => []
-        ];
-
         if ($profile && !empty($profile->character_data)) {
-            $savedData = json_decode($profile->character_data, true);
-            if (is_array($savedData)) {
-                $state = array_replace_recursive($state, $savedData);
-            }
+            return json_decode($profile->character_data, true);
         }
-
-        // استفاده از json_encode استاندارد برای تطابق دقیق با کدهای جاوا اسکریپت
-        header('Content-Type: application/json');
-        echo json_encode($state);
-        $app->close();
+        return null; // اگر دیتایی نبود
     }
 
-    // ۲. ذخیره ساخت اولیه کاراکتر
-    public function saveInitialCas()
+    private function saveUserState($state)
     {
-        // Session::checkToken() or die(json_encode(['error' => 'Invalid Token']));
-        $app = Factory::getApplication();
         $user = Factory::getUser();
-
-        if ($user->guest) {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Unauthorized']);
-            $app->close();
-        }
-
-        $input = json_decode(file_get_contents('php://input'), true);
-        $appearance = $input['appearance'] ?? [];
-        $name = $input['name'] ?? $user->name;
-
         $db = Factory::getContainer()->get('DatabaseDriver');
-        $query = $db->getQuery(true)
-            ->select('*')
-            ->from($db->quoteName('#__bloxia_user_profiles'))
-            ->where($db->quoteName('user_id') . ' = ' . (int) $user->id);
-        $db->setQuery($query);
-        $profile = $db->loadObject();
-
-        $state = [];
-        if ($profile && !empty($profile->character_data)) {
-            $state = json_decode($profile->character_data, true);
-        }
-
-        if (isset($state['freeCasUsed']) && $state['freeCasUsed'] === true) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'ویرایش رایگان اولیه قبلا انجام شده!']);
-            $app->close();
-        }
-
-        $state['appearance'] = array_merge($state['appearance'] ?? [], $appearance);
-        $state['name'] = $name;
-        $state['freeCasUsed'] = true;
-        
-        $joomlaUser = \Joomla\CMS\User\User::getInstance($user->id);
-        $joomlaUser->name = $name;
-        $joomlaUser->save();
-
-        $updateQuery = $db->getQuery(true)
-            ->update($db->quoteName('#__bloxia_user_profiles'))
+        $query = $db->getQuery(true)->update($db->quoteName('#__bloxia_user_profiles'))
             ->set($db->quoteName('character_data') . ' = ' . $db->quote(json_encode($state)))
-            ->set($db->quoteName('has_onboarded') . ' = 1')
-            ->where($db->quoteName('user_id') . ' = ' . (int) $user->id);
-            
-        $db->setQuery($updateQuery);
-        $db->execute();
+            ->set($db->quoteName('bloxia_points') . ' = ' . (int)$state['bitblox']) // آپدیت همزمان امتیازات در ستون مجزا
+            ->where('user_id = ' . (int)$user->id);
+        $db->setQuery($query)->execute();
+    }
+
+    // کاتالوگ امنیتی سرور (برای جلوگیری از هک قیمت‌ها توسط کاربران)
+    private function getItemDetails($itemId)
+    {
+        $catalog = [
+            'hat_crown' => ['type'=>'hat', 'price'=>80, 'color'=>0xfbbf24],
+            'hat_cap' => ['type'=>'hat', 'price'=>40, 'color'=>0x3b82f6],
+            'outfit_pink' => ['type'=>'shirt', 'price'=>60, 'color'=>0xec4899],
+            'outfit_purple' => ['type'=>'shirt', 'price'=>70, 'color'=>0x8b5cf6],
+            'shoes_red' => ['type'=>'shoes', 'price'=>45, 'color'=>0xef4444],
+            'shoes_gold' => ['type'=>'shoes', 'price'=>65, 'color'=>0xf59e0b],
+            'prop_sword' => ['type'=>'handProp', 'price'=>90, 'color'=>0x38bdf8],
+            'prop_axe' => ['type'=>'handProp', 'price'=>85, 'color'=>0x94a3b8],
+            'prop_flower' => ['type'=>'handProp', 'price'=>35, 'color'=>0xf43f5e],
+            'prop_phone' => ['type'=>'handProp', 'price'=>65, 'color'=>0x1e293b],
+            'furn_sofa' => ['type'=>'furniture', 'price'=>75, 'color'=>0xef4444],
+            'furn_tv' => ['type'=>'furniture', 'price'=>110, 'color'=>0x1e293b],
+            'furn_table' => ['type'=>'furniture', 'price'=>65, 'color'=>0xb45309],
+            'furn_bed' => ['type'=>'furniture', 'price'=>120, 'color'=>0x6366f1],
+            'furn_lamp' => ['type'=>'furniture', 'price'=>45, 'color'=>0xf59e0b],
+            'furn_plant' => ['type'=>'furniture', 'price'=>30, 'color'=>0x16a34a]
+        ];
+        return $catalog[$itemId] ?? null;
+    }
+
+    // ==========================================
+    // فاز اول: اقتصاد و سیستم ذخیره‌سازی
+    // ==========================================
+
+    // ۱. ارسال اطلاعات کاراکتر به بازی هنگام لود اولیه
+    public function getCharacter()
+    {
+        $user = Factory::getUser();
+        if ($user->guest) { header('Content-Type: application/json'); echo json_encode(['error'=>'Unauthorized']); exit; }
+
+        $state = $this->loadUserState();
+        if (!$state) {
+            // ساختار پیش‌فرض برای کاربر جدید
+            $state = [
+                'userId' => $user->id, 'name' => $user->name, 'bitblox' => 500, 'freeCasUsed' => false,
+                'appearance' => ['skinColor'=>0xffdbac, 'hairStyle'=>'short', 'hairColor'=>0x451a03, 'shirtColor'=>0x3b82f6, 'pantsColor'=>0x1e293b, 'shoesColor'=>0xf8fafc, 'hat'=>null, 'handProp'=>null],
+                'wardrobe' => [], 'furnitureInventory' => [], 'homeLayout' => [], 'myGames' => []
+            ];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($state);
+        exit;
+    }
+
+    // ۲. تراکنش‌های مالی (سینما، گیم‌نت، شهربازی)
+    public function walletTx()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $delta = (int) ($input['delta'] ?? 0);
+        $state = $this->loadUserState();
+
+        if ($delta < 0 && $state['bitblox'] < abs($delta)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'موجودی BitBlox کافی نیست!']);
+            exit;
+        }
+
+        $state['bitblox'] += $delta;
+        $this->saveUserState($state);
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'state' => $state]);
-        $app->close();
+        exit;
     }
 
-    // متدهای خالی برای جلوگیری از ارور ۴۰۴ وقتی کاربر روی بقیه دکمه‌ها کلیک می‌کند
-    // (در مراحل بعدی منطق این متدها را کامل می‌کنیم)
-    public function getHome() { header('Content-Type: application/json'); echo json_encode([]); Factory::getApplication()->close(); }
-    public function sync() { header('Content-Type: application/json'); echo json_encode([]); Factory::getApplication()->close(); }
-    public function hairSalon() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
-    public function submitGame() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
-    public function walletTx() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
-    public function buyCart() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
-    public function equip() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
-    public function saveHome() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); Factory::getApplication()->close(); }
+    // ۳. آرایشگاه شهر (تغییر مدل مو با کسر هزینه)
+    public function hairSalon()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $cost = (int) ($input['cost'] ?? 0);
+        $state = $this->loadUserState();
+
+        if ($state['bitblox'] < $cost) {
+            header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'موجودی BitBlox کافی نیست!']); exit;
+        }
+
+        $state['bitblox'] -= $cost;
+        $state['appearance']['hairStyle'] = $input['hairStyle'] ?? 'short';
+        $state['appearance']['hairColor'] = (int) ($input['hairColor'] ?? 0x451a03);
+        $this->saveUserState($state);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'state' => $state]);
+        exit;
+    }
+
+    // ۴. خرید از فروشگاه‌ها (محاسبه قیمت امن در سرور)
+    public function buyCart()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $itemIds = $input['items'] ?? [];
+        $state = $this->loadUserState();
+
+        $totalCost = 0;
+        $itemsToProcess = [];
+        foreach ($itemIds as $id) {
+            $details = $this->getItemDetails($id);
+            if ($details) {
+                $totalCost += $details['price'];
+                $itemsToProcess[] = ['id' => $id, 'type' => $details['type'], 'color' => $details['color']];
+            }
+        }
+
+        if ($state['bitblox'] < $totalCost) {
+            header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'موجودی BitBlox کافی نیست!']); exit;
+        }
+
+        $state['bitblox'] -= $totalCost;
+
+        foreach ($itemsToProcess as $item) {
+            if (in_array($item['type'], ['hat', 'shirt', 'shoes', 'handProp'])) {
+                if (!in_array($item['id'], $state['wardrobe'])) { $state['wardrobe'][] = $item['id']; }
+                // تجهیز خودکار آیتم خریداری شده
+                if ($item['type'] == 'hat') $state['appearance']['hat'] = $item['id'];
+                if ($item['type'] == 'shirt') $state['appearance']['shirtColor'] = $item['color'];
+                if ($item['type'] == 'shoes') $state['appearance']['shoesColor'] = $item['color'];
+                if ($item['type'] == 'handProp') $state['appearance']['handProp'] = $item['id'];
+            } elseif ($item['type'] == 'furniture') {
+                $state['furnitureInventory'][] = $item['id'];
+            }
+        }
+
+        $this->saveUserState($state);
+        header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
+    }
+
+    // ۵. پوشیدن لباس‌های داخل کمد
+    public function equip()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $itemId = $input['item_id'] ?? '';
+        $state = $this->loadUserState();
+        $details = $this->getItemDetails($itemId);
+
+        if ($details && in_array($itemId, $state['wardrobe'])) {
+            $type = $details['type'];
+            if ($type == 'hat') $state['appearance']['hat'] = ($state['appearance']['hat'] === $itemId) ? null : $itemId;
+            elseif ($type == 'shirt') $state['appearance']['shirtColor'] = $details['color'];
+            elseif ($type == 'shoes') $state['appearance']['shoesColor'] = $details['color'];
+            elseif ($type == 'handProp') $state['appearance']['handProp'] = ($state['appearance']['handProp'] === $itemId) ? null : $itemId;
+            $this->saveUserState($state);
+        }
+
+        header('Content-Type: application/json'); echo json_encode($state); exit;
+    }
+
+    // ۶. ذخیره دائمی چیدمان خانه
+    public function saveHome()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $state = $this->loadUserState();
+        
+        $state['homeLayout'] = $input['layout'] ?? [];
+        $state['furnitureInventory'] = $input['inventory'] ?? [];
+        
+        $this->saveUserState($state);
+        header('Content-Type: application/json'); echo json_encode($state); exit;
+    }
+
+    // ذخیره اولیه کاراکتر
+    public function saveInitialCas()
+    {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $state = $this->loadUserState();
+        $user = Factory::getUser();
+
+        if (isset($state['freeCasUsed']) && $state['freeCasUsed'] === true) {
+            header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'ویرایش رایگان اولیه قبلا انجام شده!']); exit;
+        }
+
+        $state['appearance'] = array_merge($state['appearance'] ?? [], $input['appearance'] ?? []);
+        $state['name'] = $input['name'] ?? $user->name;
+        $state['freeCasUsed'] = true;
+        
+        $joomlaUser = clone $user; $joomlaUser->name = $state['name']; $joomlaUser->save();
+        $this->saveUserState($state);
+
+        header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
+    }
+
+    // ==========================================
+    // متدهای فازهای بعدی (جلوگیری از ارور 404)
+    // ==========================================
+    public function getHome() { 
+        $ownerId = (int) Factory::getApplication()->input->get('owner_id', 0);
+        header('Content-Type: application/json'); echo json_encode(['ownerId' => $ownerId, 'ownerName' => 'همسایه', 'isMine' => false, 'layout' => [], 'games' => []]); exit; 
+    }
+    public function sync() { header('Content-Type: application/json'); echo json_encode([]); exit; }
+    public function submitGame() { header('Content-Type: application/json'); echo json_encode(['success' => false, 'message' => 'در حال توسعه']); exit; }
 }
