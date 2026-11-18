@@ -213,6 +213,7 @@ class MetaverseController extends BaseController
         $this->saveUserState($state);
         header('Content-Type: application/json'); echo json_encode(['success' => true, 'state' => $state]); exit;
     }
+    
     public function getHome() 
     { 
         $app = Factory::getApplication();
@@ -248,4 +249,10 @@ class MetaverseController extends BaseController
         exit; 
     }
     
+    public function syncWorld() 
+    { 
+        header('Content-Type: application/json'); 
+        echo json_encode([]); 
+        exit; 
+    }
 }

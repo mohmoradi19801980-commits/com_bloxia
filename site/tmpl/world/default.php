@@ -167,7 +167,7 @@ $baseUri = Uri::root();
             hairSalonBuy:   'index.php?option=com_bloxia&task=metaverse.hairSalon&format=json',
             submitGame:     'index.php?option=com_bloxia&task=metaverse.submitGame&format=json',
             spendOrReward:  'index.php?option=com_bloxia&task=metaverse.walletTx&format=json',
-            syncWorld:      'index.php?option=com_bloxia&task=metaverse.sync&format=json',
+            syncWorld:      'index.php?option=com_bloxia&task=metaverse.syncWorld&format=json',
             buyCart:        'index.php?option=com_bloxia&task=metaverse.buyCart&format=json',
             equipItem:      'index.php?option=com_bloxia&task=metaverse.equip&format=json',
             saveHome:       'index.php?option=com_bloxia&task=metaverse.saveHome&format=json',
@@ -459,6 +459,7 @@ $baseUri = Uri::root();
             }
 
             async syncWorld(payload) {
+                // بخش نمایشی برای ربات‌های داخل بازی
                 if (this.config.mockMode) {
                     this.mockCitizens.forEach(bot => {
                         if (bot.zone === 'plaza' && Math.random() < 0.3) {
@@ -477,14 +478,24 @@ $baseUri = Uri::root();
                     });
                     return this.mockCitizens.filter(c => c.zone === payload.zone);
                 }
-                const res = await fetch(this.config.endpoints.syncWorld, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.config.csrfToken },
-                    body: JSON.stringify(payload)
-                });
-                return await res.json();
+                
+                // بخش ارتباط با سرور و دیتابیس جوملا (ضدضربه)
+                try {
+                    const res = await fetch(this.config.endpoints.syncWorld, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.config.csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!res.ok) return []; 
+                    
+                    const data = await res.json();
+                    return Array.isArray(data) ? data : []; 
+                } catch (e) {
+                    console.error("ارتباط با سرور لحظه‌ای قطع شد:", e);
+                    return []; 
+                }
             }
-        }
 
         const bridge = new MetaverseBridge(METAVERSE_CONFIG);
 
