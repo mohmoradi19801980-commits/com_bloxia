@@ -159,7 +159,7 @@ $baseUri = Uri::root();
          * ============================================================================
          */
         const METAVERSE_CONFIG = {
-            mockMode: true,
+            mockMode: false,
             syncIntervalMs: 2500,
             endpoints: {
                 getCharacter:   'index.php?option=com_YOURCOMPONENT&task=metaverse.getCharacter&format=json',
