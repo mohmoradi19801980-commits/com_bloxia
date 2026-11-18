@@ -496,6 +496,7 @@ $baseUri = Uri::root();
                     return []; 
                 }
             }
+        }
 
         const bridge = new MetaverseBridge(METAVERSE_CONFIG);
 
