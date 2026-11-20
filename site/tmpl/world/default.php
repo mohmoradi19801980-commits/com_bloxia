@@ -1928,11 +1928,14 @@ $baseUri = Uri::root();
                                 <button class="btn-action btn-danger" id="btn-back-tv-list" style="padding:4px 10px;">⬅️ بازگشت</button>
                             </div>
                         </div>
-                        <iframe id="bloxia-game-iframe" src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts" allowfullscreen></iframe>
+                        <iframe id="bloxia-game-iframe" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts" allowfullscreen></iframe>
                     `;
+                    // ست کردن آدرس با جاوا اسکریپت برای دور زدن پلاگین SEF جوملا
+                    const iframe = document.getElementById('bloxia-game-iframe');
+                    iframe.src = gameUrl;
+
                     document.getElementById('btn-back-tv-list').onclick = () => openTvStudioPanel(homeData);
                     document.getElementById('btn-fullscreen-tv').onclick = () => {
-                        const iframe = document.getElementById('bloxia-game-iframe');
                         if (iframe.requestFullscreen) iframe.requestFullscreen();
                         else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
                     };
