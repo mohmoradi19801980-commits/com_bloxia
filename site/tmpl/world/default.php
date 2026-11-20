@@ -1924,7 +1924,7 @@ $baseUri = Uri::root();
                             <strong style="font-size:0.85rem;">🎮 ${gameTitle}</strong>
                             <button class="btn-action btn-danger" id="btn-back-tv-list" style="padding:4px 10px;">⬅️ بازگشت به لیست</button>
                         </div>
-                        <iframe src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts allow-same-origin"></iframe>
+                        <iframe src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts"></iframe>
                     `;
                     document.getElementById('btn-back-tv-list').onclick = () => openTvStudioPanel(homeData);
                 };
