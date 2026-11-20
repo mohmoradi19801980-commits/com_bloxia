@@ -3,6 +3,7 @@ namespace BastanGraphic\Component\Bloxia\Site\Controller;
 
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Uri\Uri;
 
 class MetaverseController extends BaseController
 {
@@ -255,4 +256,109 @@ class MetaverseController extends BaseController
         echo json_encode([]); 
         exit; 
     }
+    
+    public function submitGame()
+    {
+        header('Content-Type: application/json');
+        $app = Factory::getApplication();
+        $user = Factory::getUser();
+
+        if ($user->guest) {
+            echo json_encode(['success' => false, 'message' => 'لطفاً ابتدا وارد حساب کاربری شوید.']);
+            exit;
+        }
+
+        $title = trim($app->input->post->getString('title', ''));
+        $tier  = $app->input->post->getCmd('tier', 'simple');
+        $file  = $app->input->files->get('game_file', null, 'raw');
+
+        if (empty($title) || empty($file) || $file['error'] !== UPLOAD_ERR_OK) {
+            echo json_encode(['success' => false, 'message' => 'لطفاً نام بازی و فایل ZIP معتبر را انتخاب کنید.']);
+            exit;
+        }
+
+        // بررسی پسوند و حجم فایل (حداکثر ۱۵ مگابایت)
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'zip') {
+            echo json_encode(['success' => false, 'message' => 'فقط فایل‌های با فرمت ZIP مجاز هستند!']);
+            exit;
+        }
+        if ($file['size'] > 15 * 1024 * 1024) {
+            echo json_encode(['success' => false, 'message' => 'حجم فایل نباید بیشتر از ۱۵ مگابایت باشد.']);
+            exit;
+        }
+
+        // بررسی امنیتی محتوای فایل ZIP قبل از استخراج
+        $zip = new \ZipArchive();
+        if ($zip->open($file['tmp_name']) !== true) {
+            echo json_encode(['success' => false, 'message' => 'فایل ZIP خراب است و باز نمی‌شود.']);
+            exit;
+        }
+
+        $forbiddenExts = ['php', 'phtml', 'php3', 'php4', 'php5', 'phar', 'htaccess', 'sh', 'exe', 'bat', 'cgi', 'pl'];
+        $hasIndexHtml = false;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entryName = $zip->getNameIndex($i);
+
+            // جلوگیری از حمله Path Traversal
+            if (strpos($entryName, '..') !== false) {
+                $zip->close();
+                echo json_encode(['success' => false, 'message' => 'ساختار فایل ZIP نامعتبر است.']);
+                exit;
+            }
+
+            $entryExt = strtolower(pathinfo($entryName, PATHINFO_EXTENSION));
+            if (in_array($entryExt, $forbiddenExts)) {
+                $zip->close();
+                echo json_encode(['success' => false, 'message' => 'فایل غیرمجاز (' . $entryExt . ') داخل آرشیو شناسایی شد!']);
+                exit;
+            }
+
+            if (strtolower($entryName) === 'index.html') {
+                $hasIndexHtml = true;
+            }
+        }
+
+        if (!$hasIndexHtml) {
+            $zip->close();
+            echo json_encode(['success' => false, 'message' => 'فایل index.html باید مستقیماً در ریشه فایل ZIP وجود داشته باشد.']);
+            exit;
+        }
+
+        // ساخت پوشه اختصاصی و استخراج بازی
+        $gameId = 'g_' . time() . '_' . rand(100, 999);
+        $relPath = 'media/com_bloxia/games/' . (int) $user->id . '/' . $gameId;
+        $targetDir = JPATH_ROOT . '/' . $relPath;
+
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $zip->extractTo($targetDir);
+        $zip->close();
+
+        // ثبت در پروفایل کاربر با وضعیت در انتظار تایید
+        $rewardMap = ['simple' => 10, 'staged' => 20, 'pro' => 100];
+        $newGame = [
+            'id'     => $gameId,
+            'title'  => $title,
+            'tier'   => $tier,
+            'reward' => $rewardMap[$tier] ?? 10,
+            'status' => 'pending',
+            'url'    => Uri::root() . $relPath . '/index.html'
+        ];
+
+        $state = $this->loadUserState();
+        if (!isset($state['myGames']) || !is_array($state['myGames'])) {
+            $state['myGames'] = [];
+        }
+        $state['myGames'][] = $newGame;
+        $this->saveUserState($state);
+
+        echo json_encode(['success' => true, 'state' => $state, 'game' => $newGame]);
+        exit;
+    }
+
+
 }

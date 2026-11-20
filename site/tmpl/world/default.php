@@ -335,18 +335,24 @@ $baseUri = Uri::root();
                 return await res.json();
             }
 
-            async submitUserGame(title, tier, url) {
+            async submitUserGame(title, tier, fileObj) {
                 const rewardMap = { simple: 10, staged: 20, pro: 100 };
-                const newGame = { id: 'g_' + Date.now(), title, tier, reward: rewardMap[tier] || 10, status: 'pending', url };
                 if (this.config.mockMode) {
+                    const newGame = { id: 'g_' + Date.now(), title, tier, reward: rewardMap[tier] || 10, status: 'pending', url: '#' };
                     this.mockState.myGames.push(newGame);
                     this.saveMock();
                     return { success: true, state: structuredClone(this.mockState), game: newGame };
                 }
+
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('tier', tier);
+                formData.append('game_file', fileObj);
+
                 const res = await fetch(this.config.endpoints.submitGame, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': this.config.csrfToken },
-                    body: JSON.stringify(newGame)
+                    headers: { 'X-CSRF-Token': this.config.csrfToken },
+                    body: formData
                 });
                 return await res.json();
             }
@@ -1779,96 +1785,154 @@ $baseUri = Uri::root();
          * ============================================================================
          */
         function refreshBitBloxUI() { document.getElementById('bitblox-display').textContent = playerState.bitblox; }
-
+        
         function openTvStudioPanel(homeData) {
             const panel = document.getElementById('side-panel');
             const title = document.getElementById('panel-title');
             const body = document.getElementById('panel-body');
             document.getElementById('cart-section').style.display = 'none';
 
-            const isMine = !homeData || homeData.isMine;
-            const gamesList = isMine ? playerState.myGames : (homeData.games || []);
-            title.textContent = isMine ? '📺 تلویزیون و استودیو بازی‌سازی من' : `📺 بازی‌های ساخته شده توسط ${homeData.ownerName}`;
+            const isMine = homeData.isMine;
+            const gamesList = isMine ? (playerState.myGames || []) : (homeData.games || []);
 
-            let html = `<h4 style="font-size:0.84rem;margin-bottom:6px;color:#1e293b;">🎮 بازی‌های قابل اجرا روی تلویزیون:</h4>`;
-            if (gamesList.length === 0) {
-                html += `<div style="font-size:0.8rem;color:#64748b;margin-bottom:10px;">هنوز بازی تایید شده‌ای روی این تلویزیون نیست.</div>`;
+            title.textContent = isMine ? '📺 تلویزیون و استودیو بازی من' : `📺 بازی‌های خانه ${homeData.ownerName}`;
+
+            // ساخت نوار تب‌ها (فقط برای صاحب‌خانه تب آپلود نمایش داده می‌شود)
+            let html = '';
+            if (isMine) {
+                html += `
+                    <div style="display:flex;gap:6px;margin-bottom:12px;">
+                        <button id="tab-tv-play" class="btn-action btn-secondary" style="flex:1;">🎮 بازی کردن (${gamesList.length})</button>
+                        <button id="tab-tv-upload" class="btn-action btn-dark" style="flex:1;">📤 آپلود بازی جدید</button>
+                    </div>
+                `;
+            }
+
+            // بخش ۱: لیست بازی‌ها (با اسکرول برای وقتی تعداد بازی‌ها زیاد شد)
+            html += `<div id="tv-play-section">`;
+            const visibleGames = isMine ? gamesList : gamesList.filter(g => g.status === 'approved');
+
+            if (visibleGames.length === 0) {
+                html += `<div style="text-align:center;color:#64748b;padding:20px;font-size:0.85rem;">
+                    ${isMine ? 'هنوز هیچ بازی‌ای نساختی! از تب «آپلود بازی جدید» اولین بازیت رو بساز.' : 'این همسایه هنوز بازی تایید شده‌ای روی تلویزیوش نداره.'}
+                </div>`;
             } else {
-                gamesList.forEach(g => {
+                html += `<div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-left:4px;">`;
+                visibleGames.forEach(g => {
                     const isApproved = g.status === 'approved';
                     html += `
-                        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                        <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
                             <div>
-                                <div style="font-weight:700;font-size:0.82rem;">${g.title}</div>
-                                <div style="font-size:0.74rem;color:${isApproved ? '#059669' : '#d97706'};">
-                                    ${isApproved ? `✅ تایید شده (پاداش: ${g.reward} BitBlox)` : `⏳ در انتظار بررسی ادمین (${g.reward} BitBlox)`}
+                                <div style="font-weight:800;font-size:0.85rem;color:#0f172a;">${g.title}</div>
+                                <div style="font-size:0.72rem;color:${isApproved ? '#10b981' : '#f59e0b'};font-weight:700;">
+                                    ${isApproved ? '✅ تایید شده و آماده اجرا' : '⏳ در انتظار تایید مدیر'}
                                 </div>
                             </div>
                             ${isApproved
-                                ? `<button class="btn-action btn-cyan btn-play-tv-game" data-title="${g.title}" style="padding:5px 10px;">▶ اجرا</button>`
-                                : (isMine ? `<button class="btn-action btn-amber btn-demo-approve" data-id="${g.id}" style="padding:4px 8px;font-size:0.72rem;">تست تایید ادمین</button>` : '')
+                                ? `<button class="btn-action btn-play-user-game" data-url="${g.url}" data-title="${g.title}" style="padding:6px 14px;">▶️ اجرا</button>`
+                                : `<span style="font-size:0.72rem;background:#fef3c7;color:#b45309;padding:4px 8px;border-radius:8px;">در صف بررسی</span>`
                             }
                         </div>
                     `;
                 });
+                html += `</div>`;
             }
+            html += `</div>`;
 
-            html += `<div id="tv-screen-player"></div>`;
-
+            // بخش ۲: فرم آپلود بازی جدید (فقط برای صاحب‌خانه)
             if (isMine) {
                 html += `
-                    <div style="margin-top:12px;padding-top:10px;border-top:2px dashed #cbd5e1;">
-                        <h4 style="font-size:0.84rem;margin-bottom:6px;color:#4f46e5;">📤 آپلود بازی جدید برای دریافت BitBlox:</h4>
-                        <input type="text" id="new-game-title" placeholder="نام بازی (مثلاً: قلعه جادویی)" style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.8rem;margin-bottom:6px;">
-                        <select id="new-game-tier" style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.8rem;margin-bottom:6px;">
-                            <option value="simple">سطح ۱: بازی ساده (پاداش: 10 BitBlox)</option>
-                            <option value="staged">سطح ۲: بازی مرحله‌ای (پاداش: 20 BitBlox)</option>
-                            <option value="pro">سطح ۳: بازی حرفه‌ای و خلاقانه (پاداش: 100 BitBlox)</option>
+                    <div id="tv-upload-section" style="display:none;background:#f8fafc;padding:12px;border-radius:12px;border:1px solid #e2e8f0;">
+                        <label style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px;">نام بازی:</label>
+                        <input type="text" id="new-game-title" placeholder="مثلاً: ماجراجویی فضایی" style="width:100%;padding:7px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.8rem;margin-bottom:8px;">
+
+                        <label style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px;">سطح بازی:</label>
+                        <select id="new-game-tier" style="width:100%;padding:7px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.8rem;margin-bottom:8px;background:#fff;">
+                            <option value="simple">بازی ساده (پاداش تایید: 10 BitBlox)</option>
+                            <option value="staged">بازی مرحله‌ای (پاداش تایید: 20 BitBlox)</option>
+                            <option value="pro">بازی حرفه‌ای (پاداش تایید: 100 BitBlox)</option>
                         </select>
-                        <input type="text" id="new-game-url" placeholder="لینک فایل HTML5 یا Scratch بازی" style="width:100%;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.8rem;margin-bottom:8px;">
-                        <button class="btn-action" id="btn-submit-user-game" style="width:100%;">🚀 ارسال بازی برای تایید ادمین</button>
+
+                        <label style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px;">فایل ZIP بازی (شامل index.html):</label>
+                        <input type="file" id="new-game-file" accept=".zip" style="width:100%;padding:6px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.78rem;margin-bottom:10px;background:#fff;">
+
+                        <button class="btn-action" id="btn-submit-user-game" style="width:100%;padding:8px;">🚀 ارسال بازی برای تایید ادمین</button>
                     </div>
                 `;
             }
 
             body.innerHTML = html;
 
-            body.querySelectorAll('.btn-play-tv-game').forEach(btn => {
-                btn.onclick = () => {
-                    document.getElementById('tv-screen-player').innerHTML = `
-                        <div class="minigame-stage">
-                            <div style="font-weight:800;color:#38bdf8;margin-bottom:6px;">📺 در حال پخش روی تلویزیون: ${btn.dataset.title}</div>
-                            <p style="font-size:0.78rem;color:#cbd5e1;">بازی دانش‌آموز با موفقیت روی تلویزیون اتاق اجرا شد! دوستانت هم می‌توانند تماشا کنند.</p>
-                        </div>
-                    `;
-                };
-            });
+            // منطق جابه‌جایی بین دو تب
+            if (isMine) {
+                const tabPlay = document.getElementById('tab-tv-play');
+                const tabUpload = document.getElementById('tab-tv-upload');
+                const secPlay = document.getElementById('tv-play-section');
+                const secUpload = document.getElementById('tv-upload-section');
 
-            body.querySelectorAll('.btn-demo-approve').forEach(btn => {
-                btn.onclick = async () => {
-                    playerState = await bridge.adminApproveMockGame(btn.dataset.id);
-                    refreshBitBloxUI();
-                    myRig.say('هورا! ادمین بازیم رو تایید کرد و BitBlox گرفتم 💎🎉');
-                    myRig.triggerEmote('jump');
-                    openTvStudioPanel(homeData);
+                tabPlay.onclick = () => {
+                    secPlay.style.display = 'block';
+                    secUpload.style.display = 'none';
+                    tabPlay.className = 'btn-action btn-secondary';
+                    tabUpload.className = 'btn-action btn-dark';
                 };
-            });
+                tabUpload.onclick = () => {
+                    secPlay.style.display = 'none';
+                    secUpload.style.display = 'block';
+                    tabUpload.className = 'btn-action btn-secondary';
+                    tabPlay.className = 'btn-action btn-dark';
+                };
 
-            const submitBtn = document.getElementById('btn-submit-user-game');
-            if (submitBtn) {
+                // دکمه ارسال فایل ZIP
+                const submitBtn = document.getElementById('btn-submit-user-game');
                 submitBtn.onclick = async () => {
                     const gTitle = document.getElementById('new-game-title').value.trim();
                     const gTier = document.getElementById('new-game-tier').value;
-                    const gUrl = document.getElementById('new-game-url').value.trim() || '#';
+                    const gFile = document.getElementById('new-game-file').files[0];
+
                     if (!gTitle) return alert('لطفاً نام بازی را وارد کن!');
-                    const res = await bridge.submitUserGame(gTitle, gTier, gUrl);
-                    playerState = res.state;
-                    openTvStudioPanel(homeData);
+                    if (!gFile) return alert('لطفاً فایل ZIP بازی را انتخاب کن!');
+
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = '⏳ در حال آپلود و بررسی...';
+
+                    try {
+                        const res = await bridge.submitUserGame(gTitle, gTier, gFile);
+                        if (!res.success) {
+                            alert(res.message || 'خطا در آپلود بازی');
+                        } else {
+                            playerState = res.state;
+                            alert('بازی با موفقیت آپلود شد و پس از تایید مدیر روی تلویزیون فعال می‌شود!');
+                            openTvStudioPanel(homeData);
+                        }
+                    } catch (err) {
+                        alert('خطا در ارتباط با سرور هنگام آپلود.');
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = '🚀 ارسال بازی برای تایید ادمین';
+                    }
                 };
             }
 
+            // اجرای بازی در یک پنجره تمام‌صفحه روی تلویزیون
+            body.querySelectorAll('.btn-play-user-game').forEach(btn => {
+                btn.onclick = () => {
+                    const gameUrl = btn.dataset.url;
+                    const gameTitle = btn.dataset.title;
+                    body.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <strong style="font-size:0.85rem;">🎮 ${gameTitle}</strong>
+                            <button class="btn-action btn-danger" id="btn-back-tv-list" style="padding:4px 10px;">⬅️ بازگشت به لیست</button>
+                        </div>
+                        <iframe src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts allow-same-origin"></iframe>
+                    `;
+                    document.getElementById('btn-back-tv-list').onclick = () => openTvStudioPanel(homeData);
+                };
+            });
+
             panel.classList.add('open');
         }
+
 
         const chatLog = [
             { sender: 'سیستم امن', text: 'به چت‌روم امن خوش آمدید! جملات آماده را انتخاب کنید.', type: 'reply' }
