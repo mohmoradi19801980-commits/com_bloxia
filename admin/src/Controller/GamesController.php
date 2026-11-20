@@ -18,9 +18,11 @@ class GamesController extends BaseController
         $app    = Factory::getApplication();
         $userId = $app->input->getInt('user_id', 0);
         $gameId = $app->input->getCmd('game_id', '');
+        $tier   = $app->input->getCmd('tier', '');
+        $reward = $app->input->getInt('reward', -1);
 
-        if ($this->updateGameStatus($userId, $gameId, 'approved')) {
-            $app->enqueueMessage('بازی با موفقیت تایید شد و پاداش BitBlox به حساب دانش‌آموز واریز گردید.', 'success');
+        if ($this->updateGameStatus($userId, $gameId, 'approved', $tier, $reward)) {
+            $app->enqueueMessage('بازی با سطح و پاداش انتخابی تایید شد و BitBlox به حساب دانش‌آموز واریز گردید.', 'success');
         } else {
             $app->enqueueMessage('خطا در یافتن بازی یا این بازی قبلاً تایید شده است.', 'warning');
         }
@@ -37,7 +39,6 @@ class GamesController extends BaseController
         $gameId = $app->input->getCmd('game_id', '');
 
         if ($this->updateGameStatus($userId, $gameId, 'delete')) {
-            // حذف پوشه فیزیکی بازی از هاست برای جلوگیری از اشغال فضا
             $gameDir = JPATH_ROOT . '/media/com_bloxia/games/' . $userId . '/' . $gameId;
             if (is_dir($gameDir)) {
                 Folder::delete($gameDir);
@@ -50,11 +51,9 @@ class GamesController extends BaseController
         $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
     }
 
-    private function updateGameStatus(int $userId, string $gameId, string $action): bool
+    private function updateGameStatus(int $userId, string $gameId, string $action, string $newTier = '', int $newReward = -1): bool
     {
-        if (!$userId || empty($gameId)) {
-            return false;
-        }
+        if (!$userId || empty($gameId)) return false;
 
         $db = Factory::getContainer()->get('DatabaseDriver');
         $query = $db->getQuery(true)
@@ -64,22 +63,24 @@ class GamesController extends BaseController
         $db->setQuery($query);
         $profile = $db->loadObject();
 
-        if (!$profile || empty($profile->character_data)) {
-            return false;
-        }
+        if (!$profile || empty($profile->character_data)) return false;
 
         $state = json_decode($profile->character_data, true);
-        if (empty($state['myGames']) || !is_array($state['myGames'])) {
-            return false;
-        }
+        if (empty($state['myGames']) || !is_array($state['myGames'])) return false;
 
         $updated = false;
         foreach ($state['myGames'] as $index => &$game) {
             if (($game['id'] ?? '') === $gameId) {
                 if ($action === 'approved' && ($game['status'] ?? '') !== 'approved') {
+                    // اعمال سطح و پاداش جدید انتخاب‌شده توسط ادمین
+                    if (!empty($newTier)) {
+                        $game['tier'] = $newTier;
+                    }
+                    $finalReward = ($newReward >= 0) ? $newReward : (int) ($game['reward'] ?? 10);
+                    $game['reward'] = $finalReward;
                     $game['status'] = 'approved';
-                    $reward = (int) ($game['reward'] ?? 10);
-                    $state['bitblox'] = (int) ($state['bitblox'] ?? 0) + $reward;
+
+                    $state['bitblox'] = (int) ($state['bitblox'] ?? 0) + $finalReward;
                     $updated = true;
                 } elseif ($action === 'delete') {
                     unset($state['myGames'][$index]);

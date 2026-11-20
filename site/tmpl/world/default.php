@@ -1915,18 +1915,27 @@ $baseUri = Uri::root();
             }
 
             // اجرای بازی در یک پنجره تمام‌صفحه روی تلویزیون
+            // اجرای بازی در تلویزیون با قابلیت تمام‌صفحه
             body.querySelectorAll('.btn-play-user-game').forEach(btn => {
                 btn.onclick = () => {
                     const gameUrl = btn.dataset.url;
                     const gameTitle = btn.dataset.title;
                     body.innerHTML = `
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px;">
                             <strong style="font-size:0.85rem;">🎮 ${gameTitle}</strong>
-                            <button class="btn-action btn-danger" id="btn-back-tv-list" style="padding:4px 10px;">⬅️ بازگشت به لیست</button>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn-action btn-secondary" id="btn-fullscreen-tv" style="padding:4px 10px;">⛶ تمام‌صفحه</button>
+                                <button class="btn-action btn-danger" id="btn-back-tv-list" style="padding:4px 10px;">⬅️ بازگشت</button>
+                            </div>
                         </div>
-                        <iframe src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts"></iframe>
+                        <iframe id="bloxia-game-iframe" src="${gameUrl}" style="width:100%;height:340px;border:2px solid #334155;border-radius:12px;background:#000;" sandbox="allow-scripts" allowfullscreen></iframe>
                     `;
                     document.getElementById('btn-back-tv-list').onclick = () => openTvStudioPanel(homeData);
+                    document.getElementById('btn-fullscreen-tv').onclick = () => {
+                        const iframe = document.getElementById('bloxia-game-iframe');
+                        if (iframe.requestFullscreen) iframe.requestFullscreen();
+                        else if (iframe.webkitRequestFullscreen) iframe.webkitRequestFullscreen();
+                    };
                 };
             });
 

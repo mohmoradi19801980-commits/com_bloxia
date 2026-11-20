@@ -5,71 +5,170 @@ use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 
 $token = Session::getFormToken();
-$tierLabels = [
-    'simple' => 'ساده',
-    'staged' => 'مرحله‌ای',
-    'pro'    => 'حرفه‌ای'
-];
+$tierLabels = ['simple' => 'ساده', 'staged' => 'مرحله‌ای', 'pro' => 'حرفه‌ای'];
+$st = $this->state;
+$hasFilters = ($st['status'] !== '' || $st['tier'] !== '');
 ?>
 
-<div class="card">
-    <div class="card-body">
-        <?php if (empty($this->games)) : ?>
-            <div class="alert alert-info mb-0">
-                هنوز هیچ بازی‌ای توسط دانش‌آموزان ارسال نشده است.
-            </div>
-        <?php else : ?>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>نام بازی</th>
-                            <th>سازنده</th>
-                            <th>سطح / پاداش</th>
-                            <th>وضعیت</th>
-                            <th class="text-center">عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($this->games as $game) : ?>
-                            <?php
-                            $approveUrl = Route::_('index.php?option=com_bloxia&task=games.approve&user_id=' . $game->user_id . '&game_id=' . $game->id . '&' . $token . '=1');
-                            $rejectUrl  = Route::_('index.php?option=com_bloxia&task=games.reject&user_id=' . $game->user_id . '&game_id=' . $game->id . '&' . $token . '=1');
-                            ?>
-                            <tr>
-                                <td><strong><?php echo htmlspecialchars($game->title, ENT_QUOTES, 'UTF-8'); ?></strong></td>
-                                <td><?php echo htmlspecialchars($game->author, ENT_QUOTES, 'UTF-8'); ?> <small class="text-muted">(#<?php echo $game->user_id; ?>)</small></td>
-                                <td>
-                                    <span class="badge bg-secondary"><?php echo $tierLabels[$game->tier] ?? $game->tier; ?></span>
-                                    <span class="badge bg-info text-dark">💎 <?php echo $game->reward; ?> BitBlox</span>
-                                </td>
-                                <td>
-                                    <?php if ($game->status === 'approved') : ?>
-                                        <span class="badge bg-success">✅ تایید شده</span>
-                                    <?php else : ?>
-                                        <span class="badge bg-warning text-dark">⏳ در انتظار تایید</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-center">
-                                    <a href="<?php echo htmlspecialchars($game->url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        👁️ تست بازی
-                                    </a>
+<form action="<?php echo Route::_('index.php?option=com_bloxia&view=games'); ?>" method="post" name="adminForm" id="adminForm">
 
-                                    <?php if ($game->status !== 'approved') : ?>
-                                        <a href="<?php echo $approveUrl; ?>" class="btn btn-sm btn-success" onclick="return confirm('آیا از تایید این بازی و واریز BitBlox مطمئن هستید؟');">
-                                            ✔️ تایید و واریز
-                                        </a>
-                                    <?php endif; ?>
+    <!-- نوار استاندارد Search Tools جوملا -->
+    <div class="js-stools mb-3">
+        <div class="js-stools-container-bar d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="btn-toolbar d-flex flex-wrap gap-2">
+                <div class="input-group">
+                    <input type="text" name="filter_search" id="filter_search" class="form-control"
+                           placeholder="جستجو در نام بازی یا سازنده..."
+                           value="<?php echo htmlspecialchars($st['search'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <button type="submit" class="btn btn-primary" title="جستجو">
+                        <span class="icon-search" aria-hidden="true"></span>
+                    </button>
+                </div>
 
-                                    <a href="<?php echo $rejectUrl; ?>" class="btn btn-sm btn-danger" onclick="return confirm('بازی و فایل‌های آن به صورت کامل حذف شوند؟');">
-                                        🗑️ حذف
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('bloxia-filter-box').classList.toggle('d-none');">
+                    فیلترها <span class="icon-chevron-down" aria-hidden="true"></span>
+                </button>
+
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('filter_search').value='';document.getElementById('filter_status').value='';document.getElementById('filter_tier').value='';this.form.submit();">
+                    پاک کردن
+                </button>
             </div>
-        <?php endif; ?>
+
+            <div class="d-flex flex-wrap gap-2">
+                <select name="list_fullordering" class="form-select w-auto" onchange="this.form.submit()">
+                    <option value="status_asc"  <?php echo $st['ordering'] === 'status_asc' ? 'selected' : ''; ?>>در انتظار تایید (ابتدا)</option>
+                    <option value="status_desc" <?php echo $st['ordering'] === 'status_desc' ? 'selected' : ''; ?>>تایید شده (ابتدا)</option>
+                    <option value="title_asc"   <?php echo $st['ordering'] === 'title_asc' ? 'selected' : ''; ?>>نام بازی (الف تا ی)</option>
+                    <option value="title_desc"  <?php echo $st['ordering'] === 'title_desc' ? 'selected' : ''; ?>>نام بازی (ی تا الف)</option>
+                    <option value="author_asc"  <?php echo $st['ordering'] === 'author_asc' ? 'selected' : ''; ?>>نام سازنده</option>
+                    <option value="reward_desc" <?php echo $st['ordering'] === 'reward_desc' ? 'selected' : ''; ?>>پاداش (بیشترین)</option>
+                    <option value="reward_asc"  <?php echo $st['ordering'] === 'reward_asc' ? 'selected' : ''; ?>>پاداش (کمترین)</option>
+                </select>
+
+                <select name="limit" class="form-select w-auto" onchange="this.form.submit()">
+                    <?php foreach ([5, 10, 20, 50, 100, 0] as $lim) : ?>
+                        <option value="<?php echo $lim; ?>" <?php echo (int) $st['limit'] === $lim ? 'selected' : ''; ?>>
+                            <?php echo $lim === 0 ? 'همه' : $lim; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <!-- باکس فیلترهای پیشرفته -->
+        <div id="bloxia-filter-box" class="mt-2 p-2 bg-light border rounded d-flex flex-wrap gap-2 <?php echo $hasFilters ? '' : 'd-none'; ?>">
+            <select name="filter_status" id="filter_status" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">- همه وضعیت‌ها -</option>
+                <option value="pending"  <?php echo $st['status'] === 'pending' ? 'selected' : ''; ?>>⏳ در انتظار تایید</option>
+                <option value="approved" <?php echo $st['status'] === 'approved' ? 'selected' : ''; ?>>✅ تایید شده</option>
+            </select>
+
+            <select name="filter_tier" id="filter_tier" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">- همه سطوح -</option>
+                <option value="simple" <?php echo $st['tier'] === 'simple' ? 'selected' : ''; ?>>ساده</option>
+                <option value="staged" <?php echo $st['tier'] === 'staged' ? 'selected' : ''; ?>>مرحله‌ای</option>
+                <option value="pro"    <?php echo $st['tier'] === 'pro' ? 'selected' : ''; ?>>حرفه‌ای</option>
+            </select>
+        </div>
     </div>
-</div>
+
+    <!-- جدول بازی‌ها -->
+    <div class="card">
+        <div class="card-body">
+            <?php if (empty($this->games)) : ?>
+                <div class="alert alert-info mb-0">هیچ بازی‌ای با این مشخصات یافت نشد.</div>
+            <?php else : ?>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>نام بازی</th>
+                                <th>سازنده</th>
+                                <th>سطح / پاداش (قابل ویرایش)</th>
+                                <th>وضعیت</th>
+                                <th class="text-center">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($this->games as $game) : ?>
+                                <?php
+                                $rowKey    = $game->user_id . '_' . $game->id;
+                                $rejectUrl = Route::_('index.php?option=com_bloxia&task=games.reject&user_id=' . $game->user_id . '&game_id=' . $game->id . '&' . $token . '=1');
+                                ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($game->title, ENT_QUOTES, 'UTF-8'); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($game->author, ENT_QUOTES, 'UTF-8'); ?> <small class="text-muted">(#<?php echo $game->user_id; ?>)</small></td>
+                                    <td>
+                                        <?php if ($game->status !== 'approved') : ?>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <select id="tier_<?php echo $rowKey; ?>" class="form-select form-select-sm w-auto"
+                                                        onchange="syncRewardByTier('<?php echo $rowKey; ?>', this.value)">
+                                                    <option value="simple" <?php echo $game->tier === 'simple' ? 'selected' : ''; ?>>ساده</option>
+                                                    <option value="staged" <?php echo $game->tier === 'staged' ? 'selected' : ''; ?>>مرحله‌ای</option>
+                                                    <option value="pro"    <?php echo $game->tier === 'pro' ? 'selected' : ''; ?>>حرفه‌ای</option>
+                                                </select>
+                                                <input type="number" id="reward_<?php echo $rowKey; ?>" class="form-control form-control-sm"
+                                                       style="width:85px;" min="0" value="<?php echo (int) $game->reward; ?>" title="مبلغ پاداش BitBlox">
+                                                <span class="small text-muted">💎</span>
+                                            </div>
+                                        <?php else : ?>
+                                            <span class="badge bg-secondary"><?php echo $tierLabels[$game->tier] ?? $game->tier; ?></span>
+                                            <span class="badge bg-info text-dark">💎 <?php echo $game->reward; ?> BitBlox</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($game->status === 'approved') : ?>
+                                            <span class="badge bg-success">✅ تایید شده</span>
+                                        <?php else : ?>
+                                            <span class="badge bg-warning text-dark">⏳ در انتظار تایید</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="<?php echo htmlspecialchars($game->url, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            👁️ تست بازی
+                                        </a>
+
+                                        <?php if ($game->status !== 'approved') : ?>
+                                            <button type="button" class="btn btn-sm btn-success"
+                                                    onclick="approveBloxiaGame(<?php echo $game->user_id; ?>, '<?php echo $game->id; ?>', '<?php echo $rowKey; ?>')">
+                                                ✔️ تایید و واریز
+                                            </button>
+                                        <?php endif; ?>
+
+                                        <a href="<?php echo $rejectUrl; ?>" class="btn btn-sm btn-danger" onclick="return confirm('بازی و فایل‌های آن به صورت کامل حذف شوند؟');">
+                                            🗑️ حذف
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- صفحه‌بندی بومی جوملا -->
+                <div class="mt-3">
+                    <?php echo $this->pagination->getListFooter(); ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</form>
+
+<script>
+    function syncRewardByTier(rowKey, tier) {
+        const map = { simple: 10, staged: 20, pro: 100 };
+        const input = document.getElementById('reward_' + rowKey);
+        if (input && map[tier] !== undefined) {
+            input.value = map[tier];
+        }
+    }
+
+    function approveBloxiaGame(userId, gameId, rowKey) {
+        const tier = document.getElementById('tier_' + rowKey).value;
+        const reward = document.getElementById('reward_' + rowKey).value;
+        if (!confirm('آیا از تایید این بازی با پاداش ' + reward + ' BitBlox مطمئن هستید؟')) return;
+
+        const baseUrl = '<?php echo Route::_('index.php?option=com_bloxia&task=games.approve&' . $token . '=1', false); ?>';
+        window.location.href = baseUrl + '&user_id=' + userId + '&game_id=' + encodeURIComponent(gameId) + '&tier=' + encodeURIComponent(tier) + '&reward=' + encodeURIComponent(reward);
+    }
+</script>
