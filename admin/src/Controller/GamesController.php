@@ -21,10 +21,30 @@ class GamesController extends BaseController
         $tier   = $app->input->getCmd('tier', '');
         $reward = $app->input->getInt('reward', -1);
 
-        if ($this->updateGameStatus($userId, $gameId, 'approved', $tier, $reward)) {
-            $app->enqueueMessage('بازی با سطح و پاداش انتخابی تایید شد و BitBlox به حساب دانش‌آموز واریز گردید.', 'success');
+        if ($this->processGame($userId, $gameId, 'approve', $tier, $reward)) {
+            $app->enqueueMessage('بازی تایید شد و پاداش BitBlox واریز گردید.', 'success');
         } else {
-            $app->enqueueMessage('خطا در یافتن بازی یا این بازی قبلاً تایید شده است.', 'warning');
+            $app->enqueueMessage('خطا در تایید بازی.', 'warning');
+        }
+
+        $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
+    }
+
+    // ویرایش سطح و پاداش (حتی برای بازی‌های تاییدشده همراه با محاسبه مابه‌التفاوت BitBlox)
+    public function saveEdit()
+    {
+        Session::checkToken('get') or die('Invalid Token');
+
+        $app    = Factory::getApplication();
+        $userId = $app->input->getInt('user_id', 0);
+        $gameId = $app->input->getCmd('game_id', '');
+        $tier   = $app->input->getCmd('tier', '');
+        $reward = $app->input->getInt('reward', -1);
+
+        if ($this->processGame($userId, $gameId, 'edit', $tier, $reward)) {
+            $app->enqueueMessage('تغییرات سطح و پاداش با موفقیت ذخیره و موجودی دانش‌آموز به‌روزرسانی شد.', 'success');
+        } else {
+            $app->enqueueMessage('خطا در ذخیره تغییرات.', 'warning');
         }
 
         $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
@@ -38,12 +58,9 @@ class GamesController extends BaseController
         $userId = $app->input->getInt('user_id', 0);
         $gameId = $app->input->getCmd('game_id', '');
 
-        if ($this->updateGameStatus($userId, $gameId, 'delete')) {
-            $gameDir = JPATH_ROOT . '/media/com_bloxia/games/' . $userId . '/' . $gameId;
-            if (is_dir($gameDir)) {
-                Folder::delete($gameDir);
-            }
-            $app->enqueueMessage('بازی رد شد و فایل‌های آن از سرور حذف گردید.', 'info');
+        if ($this->processGame($userId, $gameId, 'delete')) {
+            $this->deleteGameFolder($userId, $gameId);
+            $app->enqueueMessage('بازی و فایل‌های آن حذف شد.', 'info');
         } else {
             $app->enqueueMessage('خطا در حذف بازی.', 'error');
         }
@@ -51,7 +68,58 @@ class GamesController extends BaseController
         $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
     }
 
-    private function updateGameStatus(int $userId, string $gameId, string $action, string $newTier = '', int $newReward = -1): bool
+    // تایید گروهی ردیف‌های تیک‌خورده
+    public function bulkApprove()
+    {
+        Session::checkToken() or die('Invalid Token');
+        $app = Factory::getApplication();
+        $cids = $app->input->post->get('cid', [], 'array');
+        $tiers = $app->input->post->get('tier', [], 'array');
+        $rewards = $app->input->post->get('reward', [], 'array');
+
+        $count = 0;
+        foreach ($cids as $key) {
+            [$userId, $gameId] = explode('|', $key);
+            $tier   = $tiers[$key] ?? '';
+            $reward = isset($rewards[$key]) ? (int) $rewards[$key] : -1;
+            if ($this->processGame((int) $userId, $gameId, 'approve', $tier, $reward)) {
+                $count++;
+            }
+        }
+
+        $app->enqueueMessage($count . ' بازی با موفقیت تایید/به‌روزرسانی شد.', 'success');
+        $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
+    }
+
+    // حذف گروهی ردیف‌های تیک‌خورده
+    public function bulkReject()
+    {
+        Session::checkToken() or die('Invalid Token');
+        $app = Factory::getApplication();
+        $cids = $app->input->post->get('cid', [], 'array');
+
+        $count = 0;
+        foreach ($cids as $key) {
+            [$userId, $gameId] = explode('|', $key);
+            if ($this->processGame((int) $userId, $gameId, 'delete')) {
+                $this->deleteGameFolder((int) $userId, $gameId);
+                $count++;
+            }
+        }
+
+        $app->enqueueMessage($count . ' بازی و فایل‌های آن‌ها حذف شد.', 'info');
+        $this->setRedirect(Route::_('index.php?option=com_bloxia&view=games', false));
+    }
+
+    private function deleteGameFolder(int $userId, string $gameId): void
+    {
+        $gameDir = JPATH_ROOT . '/media/com_bloxia/games/' . $userId . '/' . $gameId;
+        if (is_dir($gameDir)) {
+            Folder::delete($gameDir);
+        }
+    }
+
+    private function processGame(int $userId, string $gameId, string $action, string $newTier = '', int $newReward = -1): bool
     {
         if (!$userId || empty($gameId)) return false;
 
@@ -71,16 +139,25 @@ class GamesController extends BaseController
         $updated = false;
         foreach ($state['myGames'] as $index => &$game) {
             if (($game['id'] ?? '') === $gameId) {
-                if ($action === 'approved' && ($game['status'] ?? '') !== 'approved') {
-                    // اعمال سطح و پاداش جدید انتخاب‌شده توسط ادمین
+                $oldStatus = $game['status'] ?? 'pending';
+                $oldReward = (int) ($game['reward'] ?? 0);
+                $finalReward = ($newReward >= 0) ? $newReward : $oldReward;
+
+                if ($action === 'approve' || $action === 'edit') {
                     if (!empty($newTier)) {
                         $game['tier'] = $newTier;
                     }
-                    $finalReward = ($newReward >= 0) ? $newReward : (int) ($game['reward'] ?? 10);
                     $game['reward'] = $finalReward;
-                    $game['status'] = 'approved';
 
-                    $state['bitblox'] = (int) ($state['bitblox'] ?? 0) + $finalReward;
+                    if ($action === 'approve' && $oldStatus !== 'approved') {
+                        // اولین تایید: واریز کل پاداش
+                        $game['status'] = 'approved';
+                        $state['bitblox'] = (int) ($state['bitblox'] ?? 0) + $finalReward;
+                    } elseif ($oldStatus === 'approved') {
+                        // ویرایش بازیِ قبلاً تاییدشده: اعمال مابه‌التفاوت پاداش
+                        $diff = $finalReward - $oldReward;
+                        $state['bitblox'] = max(0, (int) ($state['bitblox'] ?? 0) + $diff);
+                    }
                     $updated = true;
                 } elseif ($action === 'delete') {
                     unset($state['myGames'][$index]);
