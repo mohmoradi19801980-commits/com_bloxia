@@ -77,6 +77,7 @@ class MetaverseController extends BaseController
             'furn_table' => ['type'=>'furniture', 'price'=>65, 'color'=>0xb45309],
             'furn_bed' => ['type'=>'furniture', 'price'=>120, 'color'=>0x6366f1],
             'furn_lamp' => ['type'=>'furniture', 'price'=>45, 'color'=>0xf59e0b],
+            'furn_arcade' => ['type'=>'furniture', 'price'=>95, 'color'=>0x10b981],
             'furn_plant' => ['type'=>'furniture', 'price'=>30, 'color'=>0x16a34a]
         ];
         return $catalog[$itemId] ?? null;

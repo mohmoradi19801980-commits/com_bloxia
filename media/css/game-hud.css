@@ -1,0 +1,450 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0f172a;
+}
+
+#canvas-container { width: 100%; height: 100%; position: relative; }
+
+#fade-overlay {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 900;
+}
+#fade-overlay.active { opacity: 1; pointer-events: all; }
+
+/* استایل پایه دکمه‌های بازی برجسته (Clash-style Bevel Buttons) */
+.coc-icon-btn {
+    position: relative;
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    border: 2.5px solid #ffffff;
+    background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 100%);
+    box-shadow: 0 5px 0 #475569, 0 8px 15px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+    color: #0f172a;
+}
+.coc-icon-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #475569;
+}
+.coc-icon-btn .ico { font-size: 1.45rem; line-height: 1.1; }
+.coc-icon-btn .lbl {
+    font-size: 0.65rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 1px 2px #000, 0 -1px 2px #000, 1px 0 2px #000, -1px 0 2px #000;
+    margin-top: 1px;
+}
+
+.coc-icon-btn.battle-style {
+    background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+    box-shadow: 0 5px 0 #9a3412, 0 8px 15px rgba(0,0,0,0.35);
+}
+.coc-icon-btn.home-style {
+    background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+    box-shadow: 0 5px 0 #14532d, 0 8px 15px rgba(0,0,0,0.35);
+}
+.coc-icon-btn.plaza-style {
+    background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+    box-shadow: 0 5px 0 #0c4a6e, 0 8px 15px rgba(0,0,0,0.35);
+}
+.coc-icon-btn.char-style {
+    background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+    box-shadow: 0 5px 0 #831843, 0 8px 15px rgba(0,0,0,0.35);
+}
+.coc-icon-btn.sm-btn { width: 46px; height: 46px; border-radius: 13px; }
+
+.coc-notif {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ef4444;
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 900;
+    padding: 0 6px;
+}
+
+/* بالا-چپ: پروفایل و کنترل‌های آب‌وهوا */
+.hud-top-left {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 25;
+}
+.profile-box {
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    border-radius: 14px;
+    padding: 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+}
+.level-star {
+    background: linear-gradient(135deg, #38bdf8, #1d4ed8);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+.profile-info { display: flex; flex-direction: column; font-size: 0.78rem; }
+.profile-info span { color: #fde047; font-size: 0.7rem; font-weight: 700; }
+
+.env-icon-group { display: flex; gap: 6px; }
+.coc-mini-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 2px solid #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
+    box-shadow: 0 4px 0 #475569;
+    font-size: 1.15rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.coc-mini-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #475569; }
+.coc-mini-btn.danger { background: #ef4444; color: #fff; }
+
+/* بالا-راست: نوار منابع BitBlox */
+.hud-top-right {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 25;
+}
+.coc-resource-bar {
+    background: rgba(15, 23, 42, 0.78);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 14px;
+    height: 42px;
+    padding: 0 6px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.res-value { font-size: 1rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 2px #000; }
+.res-label { font-size: 0.75rem; font-weight: 800; color: #38bdf8; }
+.res-icon.gem-bg {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #22c55e, #0ea5e9);
+    border: 1.5px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+}
+
+/* ستون‌های آیکونی چپ و راست */
+.hud-side-left {
+    position: fixed;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 25;
+}
+.hud-side-right {
+    position: fixed;
+    right: 12px;
+    top: 44%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 25;
+}
+
+/* دکمه بزرگ گوشه پایین-چپ مشابه Clash of Clans */
+.coc-big-corner-btn.bottom-left {
+    position: fixed;
+    bottom: 14px;
+    left: 14px;
+    width: 82px;
+    height: 82px;
+    border-radius: 20px;
+    border: 3px solid #fff;
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    box-shadow: 0 6px 0 #78350f, 0 10px 20px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 26;
+}
+.coc-big-corner-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #78350f; }
+.big-ico { font-size: 2rem; line-height: 1.1; }
+.big-lbl {
+    font-size: 0.72rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 1px 3px #000;
+}
+
+/* نوار ایموت‌های آیکونی پایین-وسط */
+.hud-bottom-center {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 6px 10px;
+    border-radius: 18px;
+    display: flex;
+    gap: 8px;
+    z-index: 25;
+}
+.coc-emote-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 2px solid #fff;
+    background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+    font-size: 1.25rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #475569;
+}
+.coc-emote-btn:active { transform: translateY(2px); }
+
+/* مینی‌مپ شیشه‌ای پایین-راست */
+#minimap-container {
+    position: fixed;
+    bottom: 14px;
+    right: 14px;
+    width: 180px;
+    height: 180px;
+    background: rgba(15, 23, 42, 0.28);
+    border: 2.5px solid rgba(255, 255, 255, 0.7);
+    border-radius: 22px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    z-index: 26;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+}
+#minimap-canvas { width: 100%; height: 100%; display: block; }
+.minimap-title {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    background: rgba(15, 23, 42, 0.55);
+    color: #fef08a;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 1px 7px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+/* پرامپت ورود به ساختمان */
+#portal-prompt {
+    position: fixed;
+    bottom: 72px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 0.92rem;
+    box-shadow: 0 5px 0 #14532d, 0 10px 20px rgba(0,0,0,0.4);
+    border: 2.5px solid #fff;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    z-index: 30;
+}
+#portal-prompt.visible { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
+
+/* پنجره‌های مودال و کارت‌ها */
+.coc-modal {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    border-radius: 22px;
+    padding: 16px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+    border: 3px solid #cbd5e1;
+    z-index: 50;
+    display: none;
+}
+.coc-modal.open { display: block; animation: popIn 0.2s ease; }
+.main-panel {
+    top: 72px;
+    left: 84px;
+    width: 400px;
+    max-width: calc(100vw - 110px);
+    max-height: calc(100vh - 155px);
+    overflow-y: auto;
+}
+#player-interact-card {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    border-color: #6366f1;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.close-btn { border: none; background: #fee2e2; color: #dc2626; width: 28px; height: 28px; border-radius: 8px; font-weight: 900; cursor: pointer; }
+
+.coc-action-btn {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+}
+.coc-action-btn.green { background: #10b981; }
+.coc-action-btn.cyan { background: #0284c7; }
+.coc-action-btn.pink { background: #ec4899; }
+.coc-action-btn.amber { background: #f59e0b; }
+.coc-action-btn.danger { background: #ef4444; }
+
+.direct-actions-grid { display: flex; flex-direction: column; gap: 8px; }
+.item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.shop-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 9px;
+    text-align: center;
+}
+.shop-card h4 { font-size: 0.8rem; margin-bottom: 4px; }
+.shop-card .price { font-size: 0.75rem; color: #0284c7; font-weight: 800; margin-bottom: 6px; }
+
+/* برچسب نام و حباب چت سه‌بعدی */
+.floating-label { position: fixed; transform: translate(-50%, -100%); pointer-events: none; text-align: center; z-index: 10; }
+.chat-bubble {
+    background: #fff;
+    color: #0f172a;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 2px solid #6366f1;
+    margin-bottom: 5px;
+    white-space: nowrap;
+}
+.player-tag {
+    background: rgba(15, 23, 42, 0.8);
+    color: #fff;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+}
+
+.pvp-board, .minigame-stage {
+    background: #0f172a;
+    color: #fff;
+    border-radius: 14px;
+    padding: 12px;
+    margin-top: 8px;
+    text-align: center;
+    border: 2px solid #38bdf8;
+}
+.ttt-grid { display: grid; grid-template-columns: repeat(3, 60px); gap: 6px; justify-content: center; margin: 8px auto; }
+.ttt-cell { width: 60px; height: 60px; background: #1e293b; border: 2px solid #475569; border-radius: 10px; font-size: 1.5rem; color: #38bdf8; cursor: pointer; }
+.ludo-track { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; margin: 8px 0; }
+.ludo-step { height: 26px; background: #1e293b; border: 1px solid #475569; border-radius: 5px; font-size: 0.68rem; display: flex; align-items: center; justify-content: center; }
+
+.chat-history { background: #f1f5f9; border-radius: 12px; padding: 8px; height: 140px; overflow-y: auto; margin-bottom: 8px; display: flex; flex-direction: column; gap: 5px; }
+.chat-msg { background: #fff; padding: 5px 9px; border-radius: 8px; font-size: 0.78rem; }
+.chat-msg.mine { background: #e0e7ff; border-right: 3px solid #4f46e5; }
+.chat-msg.reply { background: #dcfce7; border-right: 3px solid #10b981; }
+
+.cas-group { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; margin-bottom: 6px; }
+.cas-group-title { font-size: 0.78rem; font-weight: 700; margin-bottom: 4px; }
+.swatch-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.color-swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px #cbd5e1; cursor: pointer; }
+.color-swatch.selected { box-shadow: 0 0 0 2.5px #4f46e5; transform: scale(1.15); }
+
+.cart-box { margin-top: 10px; background: #f1f5f9; padding: 9px; border-radius: 12px; border: 2px dashed #cbd5e1; }
+.cart-summary { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 800; }
+.cart-items-list { max-height: 85px; overflow-y: auto; font-size: 0.76rem; margin: 5px 0; }
+.cart-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #e2e8f0; }
+
+#home-edit-banner {
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    z-index: 35;
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
