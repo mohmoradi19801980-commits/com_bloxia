@@ -550,20 +550,5 @@ export class UIController {
         };
         panel.classList.add('open');
     }
-	
-	public function saveCharacter()
-    {
-        header('Content-Type: application/json');
-        $input = json_decode(file_get_contents('php://input'), true);
-        $state = $this->loadUserState();
-        if (!$state) { echo json_encode(['success' => false]); exit; }
 
-        $state['appearance'] = array_merge($state['appearance'] ?? [], $input['appearance'] ?? []);
-        if (!empty($input['name'])) {
-            $state['name'] = trim($input['name']);
-        }
-        $this->saveUserState($state);
-        echo json_encode(['success' => true, 'state' => $state]);
-        exit;
-    }
 }
