@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { CATALOG, GAMENET_GAMES } from './bridge.js';
 
 export function createSignTexture(text, bgColor = '#0f172a', borderColor = '#facc15', subText = '') {

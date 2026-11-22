@@ -2,16 +2,16 @@ export const METAVERSE_CONFIG = {
     mockMode: false,
     syncIntervalMs: 2500,
     endpoints: {
-        getCharacter:  'index.php?option=com_bloxia&task=metaverse.getCharacter&format=json',
-        saveCharacter: 'index.php?option=com_bloxia&task=metaverse.saveCharacter&format=json',
-        hairSalonBuy:  'index.php?option=com_bloxia&task=metaverse.hairSalon&format=json',
-        submitGame:    'index.php?option=com_bloxia&task=metaverse.submitGame&format=json',
-        spendOrReward: 'index.php?option=com_bloxia&task=metaverse.walletTx&format=json',
-        syncWorld:     'index.php?option=com_bloxia&task=metaverse.syncWorld&format=json',
-        buyCart:       'index.php?option=com_bloxia&task=metaverse.buyCart&format=json',
-        equipItem:     'index.php?option=com_bloxia&task=metaverse.equip&format=json',
-        saveHome:      'index.php?option=com_bloxia&task=metaverse.saveHome&format=json',
-        getHomeData:   'index.php?option=com_bloxia&task=metaverse.getHome&format=json'
+        getCharacter:  '/index.php?option=com_bloxia&task=metaverse.getCharacter&format=json',
+        saveCharacter: '/index.php?option=com_bloxia&task=metaverse.saveCharacter&format=json',
+        hairSalonBuy:  '/index.php?option=com_bloxia&task=metaverse.hairSalon&format=json',
+        submitGame:    '/index.php?option=com_bloxia&task=metaverse.submitGame&format=json',
+        spendOrReward: '/index.php?option=com_bloxia&task=metaverse.walletTx&format=json',
+        syncWorld:     '/index.php?option=com_bloxia&task=metaverse.syncWorld&format=json',
+        buyCart:       '/index.php?option=com_bloxia&task=metaverse.buyCart&format=json',
+        equipItem:     '/index.php?option=com_bloxia&task=metaverse.equip&format=json',
+        saveHome:      '/index.php?option=com_bloxia&task=metaverse.saveHome&format=json',
+        getHomeData:   '/index.php?option=com_bloxia&task=metaverse.getHome&format=json'
     },
     csrfToken: window.BLOXIA_CSRF_TOKEN || (window.Joomla ? Joomla.getOptions('csrf.token') : '')
 };

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { bridge } from './bridge.js';
 import { createCharacterRig, updateCharacterAnimation } from './character.js';
 import { buildCityPlaza, buildCityInterior } from './city.js';

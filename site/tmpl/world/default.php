@@ -12,13 +12,6 @@ $mediaBase = Uri::root() . 'media/com_bloxia/';
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Bloxia</title>
     <link rel="stylesheet" href="css/game-hud.css">
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-            }
-        }
-    </script>
     <link rel="stylesheet" href="<?php echo $mediaBase; ?>css/game-hud.css">
 </head>
 <body>
