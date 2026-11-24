@@ -25,6 +25,30 @@ export class UIController {
         document.getElementById('btn-city-directory').onclick = () => this.openCityDirectoryPanel();
         document.getElementById('btn-open-cart').onclick = () => this.openCartOnlyPanel();
         document.getElementById('btn-checkout-cart').onclick = () => this.checkoutCart();
+        const bankBtn = document.getElementById('btn-open-bank-menu');
+        if (bankBtn) {
+            bankBtn.onclick = () => this.openBankChargePrompt();
+        }
+    }
+
+    openBankChargePrompt() {
+        const panel = document.getElementById('side-panel');
+        const body = document.getElementById('panel-body');
+        document.getElementById('panel-title').textContent = '🏦 شارژ حساب BitBlox';
+        document.getElementById('cart-section').style.display = 'none';
+        const bankUrl = (window.BLOXIA_BASE_URL || '/') + 'index.php?option=com_bloxia&view=bank';
+        body.innerHTML = `
+            <div style="text-align:center;padding:8px;">
+                <div style="font-size:2.4rem;margin-bottom:6px;">🏦💎</div>
+                <p style="font-size:0.85rem;color:#334155;line-height:1.7;margin-bottom:12px;">
+                    برای خرید بسته‌های <strong>۱۰۰، ۵۰۰ و ۲۰۰۰ BitBlox</strong> به صورت کارت به کارت هوشمند وارد صفحه اختصاصی <strong>بانک</strong> شوید.
+                </p>
+                <a href="${bankUrl}" class="coc-action-btn green" style="display:inline-flex;width:100%;justify-content:center;text-decoration:none;padding:12px;font-size:0.95rem;">
+                    💳 شارژ حساب (ورود به صفحه بانک)
+                </a>
+            </div>
+        `;
+        panel.classList.add('open');
     }
 
     refreshBitBlox() {

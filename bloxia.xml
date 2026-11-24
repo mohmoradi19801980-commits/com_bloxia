@@ -34,6 +34,7 @@
             <menu link="option=com_bloxia&amp;view=games">مدیریت بازی‌ها</menu>
             <menu link="option=com_bloxia&amp;view=users">کاربران و کیف پول</menu>
             <menu link="option=com_bloxia&amp;view=items">فروشگاه و قیمت‌ها</menu>
+            <menu link="option=com_bloxia&amp;view=bank">بانک و شارژ حساب</menu>
             <menu link="option=com_bloxia&amp;view=logs">لاگ فعالیت‌ها</menu>
         </submenu>
         <files folder="admin">

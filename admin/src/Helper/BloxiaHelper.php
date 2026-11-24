@@ -79,11 +79,42 @@ class BloxiaHelper
             KEY `idx_players_status` (`challenger_id`, `opponent_id`, `status`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
 
+        $bankSettingsSql = "CREATE TABLE IF NOT EXISTS `#__bloxia_bank_settings` (
+            `id` int(11) UNSIGNED NOT NULL,
+            `card_number` varchar(32) NOT NULL DEFAULT '',
+            `card_holder` varchar(120) NOT NULL DEFAULT '',
+            `sms_secret` varchar(64) NOT NULL DEFAULT '',
+            `tutorial_video_url` varchar(500) NOT NULL DEFAULT '',
+            `tutorial_pdf_url` varchar(500) NOT NULL DEFAULT '',
+            PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+        $bankOrdersSql = "CREATE TABLE IF NOT EXISTS `#__bloxia_bank_orders` (
+            `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+            `user_id` int(11) UNSIGNED NOT NULL,
+            `package_key` varchar(32) NOT NULL,
+            `bitblox_amount` int(11) UNSIGNED NOT NULL,
+            `base_toman` bigint(20) UNSIGNED NOT NULL,
+            `random_code` int(11) UNSIGNED NOT NULL,
+            `total_toman` bigint(20) UNSIGNED NOT NULL,
+            `status` varchar(20) NOT NULL DEFAULT 'pending',
+            `sms_raw` text DEFAULT NULL,
+            `created_at` datetime NOT NULL,
+            `expires_at` datetime NOT NULL,
+            `paid_at` datetime DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_status_expires` (`status`, `expires_at`),
+            KEY `idx_total_toman` (`total_toman`),
+            KEY `idx_user_id` (`user_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
         try {
             $db->setQuery($presenceSql)->execute();
             $db->setQuery($logsSql)->execute();
             $db->setQuery($chatSql)->execute();
             $db->setQuery($pvpSql)->execute();
+            $db->setQuery($bankSettingsSql)->execute();
+            $db->setQuery($bankOrdersSql)->execute();
         } catch (\Throwable $e) {
             // نادیده گرفتن خطا در صورت محدودیت دسترسی DDL
         }
@@ -144,6 +175,7 @@ class BloxiaHelper
             'game_play'           => '🎮 اجرای بازی در تلویزیون',
             'host_income'         => '💰 درآمد میزبانی بازی مهمان',
             'pvp_win'             => '⚔️ پیروزی در چالش دونفره',
+            'bank_topup'          => '🏦 شارژ حساب کارت به کارت',
             'admin_wallet_adjust' => '🏦 تغییر دستی BitBlox (ادمین)',
         ];
 
@@ -275,5 +307,107 @@ class BloxiaHelper
         }
 
         return $result;
+    }
+
+    /**
+     * پکیج‌های ثابت شارژ حساب BitBlox در بانک
+     */
+    public static function getBankPackages(): array
+    {
+        return [
+            'pkg_100' => [
+                'key'           => 'pkg_100',
+                'bitblox'       => 100,
+                'orig_toman'    => 500000,
+                'discount_pct'  => 0,
+                'base_toman'    => 500000,
+                'label'         => '۱۰۰ BitBlox',
+            ],
+            'pkg_500' => [
+                'key'           => 'pkg_500',
+                'bitblox'       => 500,
+                'orig_toman'    => 2500000,
+                'discount_pct'  => 5,
+                'base_toman'    => 2375000,
+                'label'         => '۵۰۰ BitBlox (۵٪ تخفیف)',
+            ],
+            'pkg_2000' => [
+                'key'           => 'pkg_2000',
+                'bitblox'       => 2000,
+                'orig_toman'    => 10000000,
+                'discount_pct'  => 10,
+                'base_toman'    => 9000000,
+                'label'         => '۲۰۰۰ BitBlox (۱۰٪ تخفیف)',
+            ],
+        ];
+    }
+
+    /**
+     * خواندن تنظیمات بانک (شماره کارت، کلید SMS Forwarder و لینک‌های آموزش)
+     */
+    public static function getBankSettings(): object
+    {
+        self::ensureTables();
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        $query = $db->getQuery(true)->select('*')->from($db->quoteName('#__bloxia_bank_settings'))->where('id = 1');
+        $db->setQuery($query);
+        $row = $db->loadObject();
+
+        if (!$row) {
+            $defaultSecret = bin2hex(random_bytes(12));
+            $ins = $db->getQuery(true)
+                ->insert($db->quoteName('#__bloxia_bank_settings'))
+                ->columns($db->quoteName(['id', 'card_number', 'card_holder', 'sms_secret', 'tutorial_video_url', 'tutorial_pdf_url']))
+                ->values('1, ' . $db->quote('') . ', ' . $db->quote('') . ', ' . $db->quote($defaultSecret) . ', ' . $db->quote('') . ', ' . $db->quote(''));
+            try {
+                $db->setQuery($ins)->execute();
+            } catch (\Throwable $e) {
+            }
+            return (object) [
+                'id'                 => 1,
+                'card_number'        => '',
+                'card_holder'        => '',
+                'sms_secret'         => $defaultSecret,
+                'tutorial_video_url' => '',
+                'tutorial_pdf_url'   => '',
+            ];
+        }
+
+        return $row;
+    }
+
+    /**
+     * واریز BitBlox به حساب کاربر و همگام‌سازی JSON پروفایل + ثبت لاگ
+     */
+    public static function creditUserBitblox(int $userId, int $amount, string $actionType, string $details, ?int $targetUserId = null): bool
+    {
+        if ($userId <= 0 || $amount <= 0) {
+            return false;
+        }
+        $db = Factory::getContainer()->get('DatabaseDriver');
+        $q = $db->getQuery(true)->select('*')->from($db->quoteName('#__bloxia_user_profiles'))->where('user_id = ' . $userId);
+        $db->setQuery($q);
+        $profile = $db->loadObject();
+        if (!$profile) {
+            return false;
+        }
+
+        $state = !empty($profile->character_data) ? json_decode($profile->character_data, true) : [];
+        if (!is_array($state)) {
+            $state = [];
+        }
+        $cur = isset($state['bitblox']) ? (int) $state['bitblox'] : (int) $profile->bloxia_points;
+        $newBalance = $cur + $amount;
+        $state['bitblox'] = $newBalance;
+
+        $upd = $db->getQuery(true)
+            ->update($db->quoteName('#__bloxia_user_profiles'))
+            ->set($db->quoteName('character_data') . ' = ' . $db->quote(json_encode($state)))
+            ->set($db->quoteName('bloxia_points') . ' = ' . $newBalance)
+            ->where('user_id = ' . $userId);
+        $db->setQuery($upd)->execute();
+
+        self::logActivity($userId, $actionType, $amount, $targetUserId, $details);
+        return true;
     }
 }

@@ -90,3 +90,34 @@ CREATE TABLE IF NOT EXISTS `#__bloxia_pvp_matches` (
   PRIMARY KEY (`id`),
   KEY `idx_players_status` (`challenger_id`, `opponent_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- جدول تنظیمات بانک و کارت به کارت (شارژ حساب)
+CREATE TABLE IF NOT EXISTS `#__bloxia_bank_settings` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `card_number` varchar(32) NOT NULL DEFAULT '',
+  `card_holder` varchar(120) NOT NULL DEFAULT '',
+  `sms_secret` varchar(64) NOT NULL DEFAULT '',
+  `tutorial_video_url` varchar(500) NOT NULL DEFAULT '',
+  `tutorial_pdf_url` varchar(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- جدول سفارش‌های شارژ حساب کارت به کارت با عدد رندوم ۱۰ دقیقه‌ای
+CREATE TABLE IF NOT EXISTS `#__bloxia_bank_orders` (
+  `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) UNSIGNED NOT NULL,
+  `package_key` varchar(32) NOT NULL,
+  `bitblox_amount` int(11) UNSIGNED NOT NULL,
+  `base_toman` bigint(20) UNSIGNED NOT NULL,
+  `random_code` int(11) UNSIGNED NOT NULL,
+  `total_toman` bigint(20) UNSIGNED NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'pending',
+  `sms_raw` text DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `paid_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_status_expires` (`status`, `expires_at`),
+  KEY `idx_total_toman` (`total_toman`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

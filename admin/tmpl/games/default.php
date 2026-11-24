@@ -14,6 +14,7 @@ $hasFilters = ($st['status'] !== '' || $st['tier'] !== '');
     <a href="<?php echo Route::_('index.php?option=com_bloxia&view=games'); ?>" class="btn btn-primary">🎮 مدیریت بازی‌ها</a>
     <a href="<?php echo Route::_('index.php?option=com_bloxia&view=users'); ?>" class="btn btn-outline-primary">👥 کاربران و کیف پول BitBlox</a>
     <a href="<?php echo Route::_('index.php?option=com_bloxia&view=items'); ?>" class="btn btn-outline-primary">🛍️ فروشگاه و قیمت‌ها</a>
+    <a href="<?php echo Route::_('index.php?option=com_bloxia&view=bank'); ?>" class="btn btn-outline-primary">🏦 بانک و شارژ حساب</a>
     <a href="<?php echo Route::_('index.php?option=com_bloxia&view=logs'); ?>" class="btn btn-outline-secondary">📜 لاگ فعالیت‌ها</a>
 </div>
 

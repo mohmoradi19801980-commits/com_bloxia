@@ -35,12 +35,13 @@ $mediaBase = Uri::root() . 'media/com_bloxia/';
         </div>
     </div>
 
-    <!-- بالا-راست: نوار منابع BitBlox + سبد خرید -->
+    <!-- بالا-راست: نوار منابع BitBlox (کلیک برای شارژ حساب / بانک) + سبد خرید -->
     <div class="hud-top-right">
-        <div class="coc-resource-bar">
+        <div class="coc-resource-bar" id="btn-open-bank-menu" title="شارژ حساب BitBlox (بانک)" style="cursor:pointer;">
             <span class="res-value" id="bitblox-display">500</span>
             <span class="res-label">BitBlox</span>
             <div class="res-icon gem-bg">💎</div>
+            <span style="background:#10b981;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;margin-right:4px;">+</span>
         </div>
         <button class="coc-icon-btn sm-btn" id="btn-open-cart" title="سبد خرید">
             <span class="ico">🛒</span>
