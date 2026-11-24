@@ -1,16 +1,25 @@
 document.addEventListener('DOMContentLoaded', function() {
     const btnRequest = document.getElementById('btn-request-otp');
     const btnVerify = document.getElementById('btn-verify-otp');
+    const btnBack = document.getElementById('btn-back-phone');
+    const mobileInput = document.getElementById('mobile_number');
+    const otpInput = document.getElementById('otp_code');
+    const mockOtpBox = document.getElementById('mock-otp-display');
     const csrfToken = document.getElementById('csrf_token').name;
     const ajaxUrl = document.getElementById('ajax_url').value;
 
     // مرحله 1: درخواست کد OTP
-    btnRequest.addEventListener('click', function() {
-        const mobile = document.getElementById('mobile_number').value;
+    function handleRequestOtp() {
+        const mobile = mobileInput.value.trim();
         if (mobile.length < 10) {
-            alert('لطفا شماره موبایل معتبر وارد کنید');
+            alert('لطفاً شماره موبایل معتبر وارد کنید');
+            mobileInput.focus();
             return;
         }
+
+        btnRequest.disabled = true;
+        const origText = btnRequest.textContent;
+        btnRequest.textContent = '⏳ در حال ارسال...';
 
         const formData = new FormData();
         formData.append('mobile', mobile);
@@ -25,21 +34,34 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 document.getElementById('step-phone').style.display = 'none';
                 document.getElementById('step-otp').style.display = 'block';
-                // نمایش کد به صورت تستی
-                document.getElementById('mock-otp-display').innerText = 'کد تستی شما: ' + data.data.mock_code;
+                if (data.data && data.data.mock_code) {
+                    mockOtpBox.style.display = 'block';
+                    mockOtpBox.innerText = 'کد تستی شما: ' + data.data.mock_code;
+                }
+                otpInput.focus();
             } else {
-                alert(data.message);
+                alert(data.message || 'خطا در ارسال کد تایید');
             }
+        })
+        .catch(() => alert('خطا در ارتباط با سرور'))
+        .finally(() => {
+            btnRequest.disabled = false;
+            btnRequest.textContent = origText;
         });
-    });
+    }
 
     // مرحله 2: تایید کد OTP
-    btnVerify.addEventListener('click', function() {
-        const otp = document.getElementById('otp_code').value;
+    function handleVerifyOtp() {
+        const otp = otpInput.value.trim();
         if (otp.length !== 4) {
-            alert('کد باید 4 رقمی باشد');
+            alert('کد باید ۴ رقمی باشد');
+            otpInput.focus();
             return;
         }
+
+        btnVerify.disabled = true;
+        const origText = btnVerify.textContent;
+        btnVerify.textContent = '⏳ در حال ورود...';
 
         const formData = new FormData();
         formData.append('otp', otp);
@@ -52,11 +74,29 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // اگر لاگین موفق بود، رفرش می‌کنیم تا پلاگینی که در مراحل قبل نوشتیم کاربر را ریدایرکت کند
                 window.location.href = data.data.redirect;
             } else {
-                alert(data.message);
+                alert(data.message || 'کد تایید اشتباه است');
             }
+        })
+        .catch(() => alert('خطا در ارتباط با سرور'))
+        .finally(() => {
+            btnVerify.disabled = false;
+            btnVerify.textContent = origText;
         });
-    });
+    }
+
+    btnRequest.addEventListener('click', handleRequestOtp);
+    btnVerify.addEventListener('click', handleVerifyOtp);
+
+    if (btnBack) {
+        btnBack.addEventListener('click', function() {
+            document.getElementById('step-otp').style.display = 'none';
+            document.getElementById('step-phone').style.display = 'block';
+            mobileInput.focus();
+        });
+    }
+
+    mobileInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRequestOtp(); });
+    otpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleVerifyOtp(); });
 });

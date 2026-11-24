@@ -1,0 +1,202 @@
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+.bloxia-login-page {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.22), transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(245, 158, 11, 0.18), transparent 45%),
+                linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0c4a6e 100%);
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    direction: rtl;
+    box-sizing: border-box;
+}
+
+.bloxia-login-page *,
+.bloxia-login-page *::before,
+.bloxia-login-page *::after {
+    box-sizing: border-box;
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+}
+
+.bloxia-login-container {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 3px solid #facc15;
+    border-radius: 26px;
+    padding: 28px 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 6px rgba(15, 23, 42, 0.35);
+    text-align: center;
+    color: #0f172a;
+    animation: bloxiaCardIn 0.35s ease-out;
+}
+
+@keyframes bloxiaCardIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bloxia-login-logo {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 12px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #38bdf8, #0284c7);
+    border: 3px solid #fde047;
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+}
+
+.bloxia-login-container h2 {
+    margin: 0 0 6px;
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.bloxia-login-subtitle {
+    margin: 0 0 20px;
+    font-size: 0.86rem;
+    color: #475569;
+    font-weight: 600;
+}
+
+.bloxia-login-label {
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.bloxia-login-container .input-large {
+    width: 100%;
+    padding: 13px 16px;
+    font-size: 1.08rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 1.5px;
+    direction: ltr;
+    color: #0f172a;
+    background: #f8fafc;
+    border: 2px solid #cbd5e1;
+    border-radius: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    margin-bottom: 14px;
+}
+
+.bloxia-login-container .input-large:focus {
+    background: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
+}
+
+.bloxia-btn {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 0.96rem;
+    font-weight: 800;
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.1s ease, filter 0.15s ease;
+    text-decoration: none;
+}
+
+.bloxia-btn:hover {
+    filter: brightness(1.06);
+}
+
+.bloxia-btn:active {
+    transform: translateY(2px);
+}
+
+.bloxia-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.bloxia-btn-primary {
+    background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+    border-bottom: 4px solid #0369a1;
+}
+
+.bloxia-btn-success {
+    background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+    border-bottom: 4px solid #15803d;
+}
+
+.bloxia-btn-google {
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    color: #1e293b;
+    border: 2px solid #cbd5e1;
+    border-bottom: 4px solid #94a3b8;
+}
+
+.bloxia-btn-link {
+    background: transparent;
+    color: #0284c7;
+    font-size: 0.84rem;
+    font-weight: 700;
+    border: none;
+    margin-top: 10px;
+    cursor: pointer;
+    padding: 6px;
+}
+
+.bloxia-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.bloxia-divider::before,
+.bloxia-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.bloxia-otp-badge {
+    background: #ecfdf5;
+    border: 2px dashed #10b981;
+    color: #065f46;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .bloxia-login-container {
+        padding: 22px 18px;
+        border-radius: 22px;
+    }
+    .bloxia-login-container h2 {
+        font-size: 1.25rem;
+    }
+    .bloxia-login-logo {
+        width: 60px;
+        height: 60px;
+        font-size: 1.8rem;
+    }
+}
