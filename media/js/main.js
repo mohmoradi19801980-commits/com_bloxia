@@ -46,7 +46,6 @@ class MetaverseApp {
         this.minimapBuildings = [];
         this.streetLampBulbs = [];
         this.streetLampLights = [];
-        this.clearZoneLabels();
         this.activePortal = null;
         this.remoteRigs = new Map();
         this.zoneLabels = [];
@@ -110,7 +109,9 @@ class MetaverseApp {
     setGround(mesh) { this.groundMesh = mesh; }
 
     clearZoneLabels() {
-        this.zoneLabels.forEach(l => l.el.remove());
+        if (this.zoneLabels) {
+            this.zoneLabels.forEach(l => l.el.remove());
+        }
         this.zoneLabels = [];
     }
 
