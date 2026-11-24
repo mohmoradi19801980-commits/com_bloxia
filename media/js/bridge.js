@@ -1,26 +1,28 @@
+const BASE_URL = window.BLOXIA_BASE_URL || '/';
+
 export const METAVERSE_CONFIG = {
     mockMode: false,
     syncIntervalMs: 2500,
     endpoints: {
-        getCharacter:  '/index.php?option=com_bloxia&task=metaverse.getCharacter&format=json',
-        saveCharacter: '/index.php?option=com_bloxia&task=metaverse.saveCharacter&format=json',
-        hairSalonBuy:  '/index.php?option=com_bloxia&task=metaverse.hairSalon&format=json',
-        submitGame:    '/index.php?option=com_bloxia&task=metaverse.submitGame&format=json',
-        spendOrReward: '/index.php?option=com_bloxia&task=metaverse.walletTx&format=json',
-        syncWorld:     '/index.php?option=com_bloxia&task=metaverse.syncWorld&format=json',
-        buyCart:       '/index.php?option=com_bloxia&task=metaverse.buyCart&format=json',
-        equipItem:     '/index.php?option=com_bloxia&task=metaverse.equip&format=json',
-        saveHome:      '/index.php?option=com_bloxia&task=metaverse.saveHome&format=json',
-        saveHomeStyle: '/index.php?option=com_bloxia&task=metaverse.saveHomeStyle&format=json',
-        getCatalog:    '/index.php?option=com_bloxia&task=metaverse.getCatalog&format=json',
-        getHomeData:   '/index.php?option=com_bloxia&task=metaverse.getHome&format=json',
-        getNeighbors:  '/index.php?option=com_bloxia&task=metaverse.getNeighbors&format=json',
-        recordGamePlay:'/index.php?option=com_bloxia&task=metaverse.recordGamePlay&format=json',
-        sendChat:      '/index.php?option=com_bloxia&task=metaverse.sendChat&format=json',
-        pvpCreate:     '/index.php?option=com_bloxia&task=metaverse.pvpCreate&format=json',
-        pvpRespond:    '/index.php?option=com_bloxia&task=metaverse.pvpRespond&format=json',
-        pvpMove:       '/index.php?option=com_bloxia&task=metaverse.pvpMove&format=json',
-        pvpStatus:     '/index.php?option=com_bloxia&task=metaverse.pvpStatus&format=json'
+        getCharacter:  `${BASE_URL}index.php?option=com_bloxia&task=metaverse.getCharacter&format=json`,
+        saveCharacter: `${BASE_URL}index.php?option=com_bloxia&task=metaverse.saveCharacter&format=json`,
+        hairSalonBuy:  `${BASE_URL}index.php?option=com_bloxia&task=metaverse.hairSalon&format=json`,
+        submitGame:    `${BASE_URL}index.php?option=com_bloxia&task=metaverse.submitGame&format=json`,
+        spendOrReward: `${BASE_URL}index.php?option=com_bloxia&task=metaverse.walletTx&format=json`,
+        syncWorld:     `${BASE_URL}index.php?option=com_bloxia&task=metaverse.syncWorld&format=json`,
+        buyCart:       `${BASE_URL}index.php?option=com_bloxia&task=metaverse.buyCart&format=json`,
+        equipItem:     `${BASE_URL}index.php?option=com_bloxia&task=metaverse.equip&format=json`,
+        saveHome:      `${BASE_URL}index.php?option=com_bloxia&task=metaverse.saveHome&format=json`,
+        saveHomeStyle: `${BASE_URL}index.php?option=com_bloxia&task=metaverse.saveHomeStyle&format=json`,
+        getCatalog:    `${BASE_URL}index.php?option=com_bloxia&task=metaverse.getCatalog&format=json`,
+        getHomeData:   `${BASE_URL}index.php?option=com_bloxia&task=metaverse.getHome&format=json`,
+        getNeighbors:  `${BASE_URL}index.php?option=com_bloxia&task=metaverse.getNeighbors&format=json`,
+        recordGamePlay:`${BASE_URL}index.php?option=com_bloxia&task=metaverse.recordGamePlay&format=json`,
+        sendChat:      `${BASE_URL}index.php?option=com_bloxia&task=metaverse.sendChat&format=json`,
+        pvpCreate:     `${BASE_URL}index.php?option=com_bloxia&task=metaverse.pvpCreate&format=json`,
+        pvpRespond:    `${BASE_URL}index.php?option=com_bloxia&task=metaverse.pvpRespond&format=json`,
+        pvpMove:       `${BASE_URL}index.php?option=com_bloxia&task=metaverse.pvpMove&format=json`,
+        pvpStatus:     `${BASE_URL}index.php?option=com_bloxia&task=metaverse.pvpStatus&format=json`
     },
     csrfToken: window.BLOXIA_CSRF_TOKEN || (window.Joomla ? Joomla.getOptions('csrf.token') : '')
 };

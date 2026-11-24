@@ -1,4 +1,4 @@
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import * as THREE from './three/three.module.js';
 import { bridge } from './bridge.js';
 import { createCharacterRig, updateCharacterAnimation } from './character.js';
 import { buildCityPlaza, buildCityInterior } from './city.js';
@@ -453,18 +453,29 @@ class MetaverseApp {
     }
 
     async start() {
-        if (document.fonts && document.fonts.ready) {
-            await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1200))]);
+        try {
+            if (document.fonts && document.fonts.ready) {
+                await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1200))]);
+            }
+            await bridge.loadCatalogFromServer();
+            this.playerState = await bridge.getCharacter();
+            if (!this.playerState || this.playerState.error || !this.playerState.appearance) {
+                console.error('Invalid playerState:', this.playerState);
+                document.getElementById('zone-title-display').textContent = '⚠️ خطا در بارگذاری اطلاعات کاربر';
+                return;
+            }
+            document.getElementById('player-name-display').textContent = this.playerState.name;
+            this.ui.refreshBitBlox();
+
+            this.myRig = createCharacterRig(this.playerState.name, this.playerState.appearance, null);
+            this.scene.add(this.myRig.mesh);
+
+            await this.loadZone('plaza');
+        } catch (err) {
+            console.error('Bloxia start error:', err);
+            document.getElementById('zone-title-display').textContent = '⚠️ خطا در اجرای دنیای سه‌بعدی';
+            return;
         }
-        await bridge.loadCatalogFromServer();
-        this.playerState = await bridge.getCharacter();
-        document.getElementById('player-name-display').textContent = this.playerState.name;
-        this.ui.refreshBitBlox();
-
-        this.myRig = createCharacterRig(this.playerState.name, this.playerState.appearance, null);
-        this.scene.add(this.myRig.mesh);
-
-        await this.loadZone('plaza');
 
         const clock = new THREE.Clock();
         const loop = () => {

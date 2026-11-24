@@ -1,4 +1,4 @@
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import * as THREE from './three/three.module.js';
 import { createSignTexture, buildDoorstepPlant } from './city.js';
 
 function createPatternTexture(kind, baseHex = 0xd8b48b) {

@@ -149,8 +149,10 @@ $mediaBase = Uri::root() . 'media/com_bloxia/';
         </div>
     </div>
 
-    <script type="module" src="js/main.js"></script>
-    <script>window.BLOXIA_CSRF_TOKEN = '<?php echo Session::getFormToken(); ?>';</script>
+    <script>
+        window.BLOXIA_CSRF_TOKEN = '<?php echo Session::getFormToken(); ?>';
+        window.BLOXIA_BASE_URL = '<?php echo Uri::root(); ?>';
+    </script>
     <script type="module" src="<?php echo $mediaBase; ?>js/main.js"></script>
 </body>
 </html>

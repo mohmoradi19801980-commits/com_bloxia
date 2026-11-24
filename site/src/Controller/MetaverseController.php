@@ -6,6 +6,13 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
 use BastanGraphic\Component\Bloxia\Administrator\Helper\BloxiaHelper;
 
+if (!class_exists(BloxiaHelper::class)) {
+    $helperPath = JPATH_ADMINISTRATOR . '/components/com_bloxia/src/Helper/BloxiaHelper.php';
+    if (is_file($helperPath)) {
+        require_once $helperPath;
+    }
+}
+
 class MetaverseController extends BaseController
 {
     // ==========================================
