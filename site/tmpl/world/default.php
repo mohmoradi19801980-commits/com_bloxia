@@ -11,6 +11,8 @@ $mediaBase = Uri::root() . 'media/com_bloxia/';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Bloxia</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
     <link rel="stylesheet" href="<?php echo $mediaBase; ?>css/game-hud.css">
 </head>
 <body>

@@ -46,8 +46,13 @@ class MetaverseApp {
         this.minimapBuildings = [];
         this.streetLampBulbs = [];
         this.streetLampLights = [];
+        this.clearZoneLabels();
         this.activePortal = null;
         this.remoteRigs = new Map();
+        this.zoneLabels = [];
+        this.pendingEmote = null;
+        this.pendingChat = null;
+        this.lastChatId = 0;
 
         this.timeModes = ['day', 'sunset', 'night'];
         this.weatherModes = ['sunny', 'cloudy', 'rain', 'snow'];
@@ -104,6 +109,21 @@ class MetaverseApp {
 
     setGround(mesh) { this.groundMesh = mesh; }
 
+    clearZoneLabels() {
+        this.zoneLabels.forEach(l => l.el.remove());
+        this.zoneLabels = [];
+    }
+
+    addZoneLabel(x, y, z, text) {
+        const layer = document.getElementById('labels-layer');
+        if (!layer) return;
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.cssText = 'position:absolute;transform:translate(-50%,-50%);background:rgba(15,23,42,0.88);color:#fde047;border:2px solid #facc15;border-radius:10px;padding:3px 10px;font-size:0.78rem;font-weight:700;white-space:nowrap;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.35);';
+        layer.appendChild(el);
+        this.zoneLabels.push({ pos: new THREE.Vector3(x, y, z), el });
+    }
+
     addPortal(x, z, targetZone, promptLabel, color = 0xf59e0b) {
         const pad = new THREE.Mesh(
             new THREE.CylinderGeometry(1.35, 1.35, 0.08, 24),
@@ -128,6 +148,7 @@ class MetaverseApp {
         this.minimapBuildings = [];
         this.streetLampBulbs = [];
         this.streetLampLights = [];
+        this.clearZoneLabels();
         this.activePortal = null;
         this.targetRing.visible = false;
         document.getElementById('portal-prompt').classList.remove('visible');
@@ -179,16 +200,36 @@ class MetaverseApp {
     renderHomeFurniture() {
         this.homeFurnitureGroup.clear();
         const layout = this.currentHomeData?.layout || this.playerState.homeLayout;
+        const isMine = this.currentHomeData?.isMine;
         layout.forEach(p => {
-            const mesh = buildRealisticFurniture(p.itemId);
+            const mesh = buildRealisticFurniture(p.itemId, p.color);
             mesh.position.set(p.x, 0, p.z);
             mesh.rotation.y = p.rotY || 0;
             if (p.itemId === 'furn_tv') {
                 mesh.userData = { action: 'tv_studio', homeData: this.currentHomeData };
                 this.interactables.push(mesh);
+            } else if (isMine) {
+                mesh.userData = { action: 'edit_furniture', furnitureUid: p.uid, furnitureData: p };
+                this.interactables.push(mesh);
             }
             this.homeFurnitureGroup.add(mesh);
         });
+    }
+
+    rebuildHomeView() {
+        if (!this.currentZone.startsWith('home_')) return;
+        this.worldGroup.clear();
+        this.obstacles = [];
+        this.portals = [];
+        this.interactables = [];
+        this.clearZoneLabels();
+        this.currentHomeData = {
+            ...this.currentHomeData,
+            homeStyle: this.playerState.homeStyle,
+            layout: this.playerState.homeLayout
+        };
+        buildHomeInterior(this.currentHomeData, this);
+        this.renderHomeFurniture();
     }
 
     startPlacingFurniture(itemDef) {
@@ -231,6 +272,7 @@ class MetaverseApp {
             btn.onclick = () => {
                 this.myRig.triggerEmote(btn.dataset.emote);
                 this.myRig.say(btn.dataset.text);
+                this.queueBroadcast(btn.dataset.emote, btn.dataset.text);
             };
         });
 
@@ -272,6 +314,7 @@ class MetaverseApp {
                 while (obj) {
                     if (obj.userData?.action === 'tv_studio') { this.ui.openTvStudioPanel(obj.userData.homeData); return; }
                     if (obj.userData?.action === 'wardrobe') { this.ui.openWardrobePanel(); return; }
+                    if (obj.userData?.action === 'edit_furniture') { this.ui.openFurnitureEditModal(obj.userData.furnitureData); return; }
                     obj = obj.parent;
                 }
                 this.ui.openZoneActivity(this.currentZone);
@@ -289,7 +332,8 @@ class MetaverseApp {
                 if (idx > -1) this.playerState.furnitureInventory.splice(idx, 1);
                 this.playerState.homeLayout.push({ uid: 'f_' + Date.now(), itemId: this.placingItem.id, x: Math.round(pt.x), z: Math.round(pt.z), rotY: this.placingRot });
                 this.renderHomeFurniture();
-                this.playerState = await bridge.updateHomeAndInventory(this.playerState.homeLayout, this.playerState.furnitureInventory);
+                const saveRes = await bridge.updateHomeAndInventory(this.playerState.homeLayout, this.playerState.furnitureInventory);
+                if (saveRes?.state) this.playerState = saveRes.state;
                 this.cancelPlacing();
                 return;
             }
@@ -306,9 +350,35 @@ class MetaverseApp {
         });
     }
 
+    queueBroadcast(emote = null, chat = null) {
+        if (emote) this.pendingEmote = emote;
+        if (chat) this.pendingChat = chat;
+        this.syncWorld();
+    }
+
     async syncWorld() {
         if (!this.myRig) return;
-        const others = await bridge.syncWorld({ zone: this.currentZone, x: this.myRig.mesh.position.x, z: this.myRig.mesh.position.z });
+        const emoteToSend = this.pendingEmote;
+        const chatToSend = this.pendingChat;
+        this.pendingEmote = null;
+        this.pendingChat = null;
+
+        const syncData = await bridge.syncWorld({
+            zone: this.currentZone,
+            x: this.myRig.mesh.position.x,
+            z: this.myRig.mesh.position.z,
+            emote: emoteToSend,
+            chat: chatToSend,
+            lastChatId: this.lastChatId
+        });
+        const others = syncData.players || [];
+        if (syncData.chats && syncData.chats.length > 0) {
+            this.lastChatId = syncData.chats[syncData.chats.length - 1].id;
+            this.ui.receiveIncomingChats(syncData.chats);
+        }
+        if (syncData.pvp) {
+            this.ui.handlePvpSync(syncData.pvp);
+        }
         const ids = new Set();
         others.forEach(p => {
             ids.add(p.id);
@@ -317,10 +387,21 @@ class MetaverseApp {
                 rig = createCharacterRig(p.name, p.appearance, p);
                 rig.mesh.position.set(p.x, 0, p.z);
                 rig.targetPos.set(p.x, 0, p.z);
+                rig.lastEmoteAt = null;
+                rig.lastChatAt = null;
                 this.remotePlayersGroup.add(rig.mesh);
                 this.remoteRigs.set(p.id, rig);
             } else {
                 rig.targetPos.set(p.x, 0, p.z);
+                rig.mesh.userData.citizenData = p;
+            }
+            if (p.emote && p.emoteAt && p.emoteAt !== rig.lastEmoteAt) {
+                rig.lastEmoteAt = p.emoteAt;
+                rig.triggerEmote(p.emote);
+            }
+            if (p.chat && p.chatAt && p.chatAt !== rig.lastChatAt) {
+                rig.lastChatAt = p.chatAt;
+                rig.say(p.chat);
             }
         });
         for (const [id, rig] of this.remoteRigs.entries()) {
@@ -347,7 +428,7 @@ class MetaverseApp {
             ctx.fillStyle = b.color + 'cc';
             ctx.fillRect(tx(b.x - b.w / 2), ty(b.z - b.d / 2), b.w * scale, b.d * scale);
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 9px Tahoma';
+            ctx.font = 'bold 11px "Vazirmatn", Tahoma';
             ctx.textAlign = 'center';
             ctx.fillText(b.label, tx(b.x), ty(b.z) + 3);
         });
@@ -372,6 +453,10 @@ class MetaverseApp {
     }
 
     async start() {
+        if (document.fonts && document.fonts.ready) {
+            await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1200))]);
+        }
+        await bridge.loadCatalogFromServer();
         this.playerState = await bridge.getCharacter();
         document.getElementById('player-name-display').textContent = this.playerState.name;
         this.ui.refreshBitBlox();
@@ -423,6 +508,16 @@ class MetaverseApp {
             }
 
             this.remoteRigs.forEach(r => updateCharacterAnimation(r, dt, t, this.camera, null, null));
+            this.zoneLabels.forEach(l => {
+                const p = l.pos.clone().project(this.camera);
+                if (p.z < 1) {
+                    l.el.style.left = `${(p.x * 0.5 + 0.5) * window.innerWidth}px`;
+                    l.el.style.top = `${(-p.y * 0.5 + 0.5) * window.innerHeight}px`;
+                    l.el.style.display = 'block';
+                } else {
+                    l.el.style.display = 'none';
+                }
+            });
             this.renderMiniMap();
             this.renderer.render(this.scene, this.camera);
         };

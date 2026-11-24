@@ -50,10 +50,11 @@ class HtmlView extends BaseHtmlView
                         'author'  => $data['name'] ?? $row->name ?? $row->username,
                         'id'      => $g['id'] ?? '',
                         'title'   => $g['title'] ?? 'بدون عنوان',
-                        'tier'    => $g['tier'] ?? 'simple',
-                        'reward'  => (int) ($g['reward'] ?? 10),
-                        'status'  => $g['status'] ?? 'pending',
-                        'url'     => $g['url'] ?? '#'
+                        'tier'       => $g['tier'] ?? 'simple',
+                        'reward'     => (int) ($g['reward'] ?? 10),
+                        'play_count' => (int) ($g['play_count'] ?? 0),
+                        'status'     => $g['status'] ?? 'pending',
+                        'url'        => $g['url'] ?? '#'
                     ];
 
                     // اعمال فیلتر جستجو

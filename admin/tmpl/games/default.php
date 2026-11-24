@@ -10,6 +10,13 @@ $st = $this->state;
 $hasFilters = ($st['status'] !== '' || $st['tier'] !== '');
 ?>
 
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <a href="<?php echo Route::_('index.php?option=com_bloxia&view=games'); ?>" class="btn btn-primary">🎮 مدیریت بازی‌ها</a>
+    <a href="<?php echo Route::_('index.php?option=com_bloxia&view=users'); ?>" class="btn btn-outline-primary">👥 کاربران و کیف پول BitBlox</a>
+    <a href="<?php echo Route::_('index.php?option=com_bloxia&view=items'); ?>" class="btn btn-outline-primary">🛍️ فروشگاه و قیمت‌ها</a>
+    <a href="<?php echo Route::_('index.php?option=com_bloxia&view=logs'); ?>" class="btn btn-outline-secondary">📜 لاگ فعالیت‌ها</a>
+</div>
+
 <form action="<?php echo Route::_('index.php?option=com_bloxia&view=games'); ?>" method="post" name="adminForm" id="adminForm">
 
     <!-- نوار استاندارد Search Tools جوملا -->
@@ -97,6 +104,7 @@ $hasFilters = ($st['status'] !== '' || $st['tier'] !== '');
                                 <th>نام بازی</th>
                                 <th>سازنده</th>
                                 <th>سطح / پاداش (قابل ویرایش)</th>
+                                <th class="text-center">تعداد اجرا</th>
                                 <th>وضعیت</th>
                                 <th class="text-center">عملیات</th>
                             </tr>
@@ -129,6 +137,9 @@ $hasFilters = ($st['status'] !== '' || $st['tier'] !== '');
                                                    style="width:85px;" min="0" value="<?php echo (int) $game->reward; ?>" title="مبلغ پاداش BitBlox">
                                             <span class="small text-muted">💎</span>
                                         </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info text-dark">▶️ <?php echo (int) $game->play_count; ?></span>
                                     </td>
                                     <td>
                                         <?php if ($game->status === 'approved') : ?>

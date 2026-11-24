@@ -21,23 +21,27 @@ export function createSignTexture(text, bgColor = '#0f172a', borderColor = '#fac
     ctx.roundRect(10, 10, 1004, 236, 36);
     ctx.stroke();
 
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 4;
     ctx.fillStyle = '#ffffff';
-    ctx.font = subText ? '900 48px "Vazirmatn", Tahoma' : '900 60px "Vazirmatn", Tahoma';
+    ctx.font = subText ? '700 56px "Vazirmatn", Tahoma, sans-serif' : '700 72px "Vazirmatn", Tahoma, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 512, subText ? 95 : 132);
+    ctx.fillText(text, 512, subText ? 92 : 128);
 
     if (subText) {
         ctx.fillStyle = '#fde047';
-        ctx.font = '700 32px "Vazirmatn", Tahoma';
-        ctx.fillText(subText, 512, 175);
+        ctx.font = '700 38px "Vazirmatn", Tahoma, sans-serif';
+        ctx.fillText(subText, 512, 178);
     }
 
     const tex = new THREE.CanvasTexture(canvas);
-    tex.anisotropy = 8;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.needsUpdate = true;
     return tex;
 }
 

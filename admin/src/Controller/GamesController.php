@@ -8,6 +8,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Router\Route;
 use Joomla\Filesystem\Folder;
+use BastanGraphic\Component\Bloxia\Administrator\Helper\BloxiaHelper;
 
 class GamesController extends BaseController
 {
@@ -137,11 +138,17 @@ class GamesController extends BaseController
         if (empty($state['myGames']) || !is_array($state['myGames'])) return false;
 
         $updated = false;
+        $logAction = '';
+        $logDelta = 0;
+        $logDetails = '';
+        $adminId = (int) Factory::getUser()->id;
+
         foreach ($state['myGames'] as $index => &$game) {
             if (($game['id'] ?? '') === $gameId) {
                 $oldStatus = $game['status'] ?? 'pending';
                 $oldReward = (int) ($game['reward'] ?? 0);
                 $finalReward = ($newReward >= 0) ? $newReward : $oldReward;
+                $gameTitle = $game['title'] ?? $gameId;
 
                 if ($action === 'approve' || $action === 'edit') {
                     if (!empty($newTier)) {
@@ -153,15 +160,24 @@ class GamesController extends BaseController
                         // اولین تایید: واریز کل پاداش
                         $game['status'] = 'approved';
                         $state['bitblox'] = (int) ($state['bitblox'] ?? 0) + $finalReward;
+                        $logAction = 'game_approve';
+                        $logDelta = $finalReward;
+                        $logDetails = 'تایید بازی «' . $gameTitle . '» (سطح: ' . ($game['tier'] ?? 'simple') . ')';
                     } elseif ($oldStatus === 'approved') {
                         // ویرایش بازیِ قبلاً تاییدشده: اعمال مابه‌التفاوت پاداش
                         $diff = $finalReward - $oldReward;
                         $state['bitblox'] = max(0, (int) ($state['bitblox'] ?? 0) + $diff);
+                        $logAction = 'game_edit';
+                        $logDelta = $diff;
+                        $logDetails = 'ویرایش پاداش بازی «' . $gameTitle . '» به ' . $finalReward . ' BitBlox';
                     }
                     $updated = true;
                 } elseif ($action === 'delete') {
                     unset($state['myGames'][$index]);
                     $state['myGames'] = array_values($state['myGames']);
+                    $logAction = 'game_reject';
+                    $logDelta = 0;
+                    $logDetails = 'رد و حذف بازی «' . $gameTitle . '»';
                     $updated = true;
                 }
                 break;
@@ -175,6 +191,10 @@ class GamesController extends BaseController
                 ->set($db->quoteName('bloxia_points') . ' = ' . (int) ($state['bitblox'] ?? 0))
                 ->where($db->quoteName('user_id') . ' = ' . $userId);
             $db->setQuery($updateQuery)->execute();
+
+            if ($logAction !== '') {
+                BloxiaHelper::logActivity($userId, $logAction, $logDelta, $adminId ?: null, $logDetails);
+            }
         }
 
         return $updated;
